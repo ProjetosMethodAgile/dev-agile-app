@@ -10,17 +10,17 @@ const dbConfig = require(__dirname + "/../config/database/db.js");
 const db = {};
 
 // Inicializa as instâncias do Sequelize para os dois bancos de dados
-const sequelizeSisplan = new Sequelize(
-  dbConfig.sisplan.database,
-  dbConfig.sisplan.username,
-  dbConfig.sisplan.password,
-  dbConfig.sisplan
+const sequelizeERP = new Sequelize(
+  dbConfig.erp.database,
+  dbConfig.erp.username,
+  dbConfig.erp.password,
+  dbConfig.erp
 );
-const sequelizeAmalfisCli = new Sequelize(
-  dbConfig.amalfisCli.database,
-  dbConfig.amalfisCli.username,
-  dbConfig.amalfisCli.password,
-  dbConfig.amalfisCli
+const sequelizeDevAgileCli = new Sequelize(
+  dbConfig.devAgile.database,
+  dbConfig.devAgile.username,
+  dbConfig.devAgile.password,
+  dbConfig.devAgile
 );
 
 // Função para inicializar os models para cada banco de dados
@@ -53,14 +53,14 @@ const initializeModels = (sequelizeInstance, dirname) => {
 };
 
 // Inicializa os models para cada banco de dados
-const modelsSisplan = initializeModels(sequelizeSisplan, __dirname);
-const modelsAmalfisCli = initializeModels(sequelizeAmalfisCli, __dirname);
+const modelsSisplan = initializeModels(sequelizeERP, __dirname);
+const modelsAmalfisCli = initializeModels(sequelizeDevAgileCli, __dirname);
 
 // Adiciona os models ao objeto db para exportação
 db.sisplan = modelsSisplan;
 db.amalfisCli = modelsAmalfisCli;
-db.sequelizeSisplan = sequelizeSisplan;
-db.sequelizeAmalfisCli = sequelizeAmalfisCli;
+db.sequelizeERP = sequelizeERP;
+db.sequelizeDevAgileCli = sequelizeDevAgileCli;
 db.Sequelize = Sequelize;
 
 module.exports = db;

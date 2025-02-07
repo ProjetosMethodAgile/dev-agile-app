@@ -1,7 +1,7 @@
 require("dotenv/config.js");
 
 module.exports = {
-  sisplan: {
+  devAgile: {
     username: process.env.USER_DB,
     password: process.env.PASSWORD_DB,
     database: process.env.DATABASE_DB,
@@ -9,7 +9,7 @@ module.exports = {
     port: process.env.PORT_DB,
     dialect: process.env.DIALECT_DB,
   },
-  amalfisCli: {
+  erp: {
     username: process.env.USER_DB2,
     password: process.env.PASSWORD_DB2,
     database: process.env.DATABASE_DB2,

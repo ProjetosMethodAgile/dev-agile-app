@@ -1,21 +1,31 @@
-const { Sequelize } = require('sequelize');
-const dbConfig = require('./database/db.js');
-
-// Instância para o banco de dados Sisplan
-const sequelizeSisplan = new Sequelize(dbConfig.sisplan.database, dbConfig.sisplan.username, dbConfig.sisplan.password, {
-    host: dbConfig.sisplan.host,
-    port: dbConfig.sisplan.port,
-    dialect: dbConfig.sisplan.dialect,
-});
+const { Sequelize } = require("sequelize");
+const dbConfig = require("./database/db.js");
 
 // Instância para o banco de dados AmalfisCli
-const sequelizeAmalfisCli = new Sequelize(dbConfig.amalfisCli.database, dbConfig.amalfisCli.username, dbConfig.amalfisCli.password, {
-    host: dbConfig.amalfisCli.host,
-    port: dbConfig.amalfisCli.port,
-    dialect: dbConfig.amalfisCli.dialect,
-});
+const sequelizeDevAgileCli = new Sequelize(
+  dbConfig.devAgile.database,
+  dbConfig.devAgile.username,
+  dbConfig.devAgile.password,
+  {
+    host: dbConfig.devAgile.host,
+    port: dbConfig.devAgile.port,
+    dialect: dbConfig.devAgile.dialect,
+  }
+);
+
+// Instância para o banco de dados Sisplan
+const sequelizeERP = new Sequelize(
+  dbConfig.erp.database,
+  dbConfig.erp.username,
+  dbConfig.erp.password,
+  {
+    host: dbConfig.erp.host,
+    port: dbConfig.erp.port,
+    dialect: dbConfig.erp.dialect,
+  }
+);
 
 module.exports = {
-    sequelizeSisplan,
-    sequelizeAmalfisCli,
+  sequelizeDevAgileCli,
+  sequelizeERP,
 };
