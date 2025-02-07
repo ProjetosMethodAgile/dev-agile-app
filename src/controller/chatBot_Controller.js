@@ -1,41 +1,10 @@
-const { amalfisCli, Sequelize } = require("../models");
 const ChatBot_Services = require("../services/chatBot_Services");
-const { v4: uuidv4 } = require("uuid");
 
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "SEU_ACCESS_TOKEN_AQUI";
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "SEU_VERIFY_TOKEN_AQUI";
 const API_URL = process.env.API_URL;
 
 const chatbot_services = new ChatBot_Services();
-
-//resposta de mensagens
-const replyMessage = async (to, type, message) => {
-  if (!to || !message || !type) {
-    console.log('Os campos "to", type e "message" são obrigatórios.');
-  } else {
-    try {
-      const data = {
-        messaging_product: "whatsapp",
-        to,
-        type: "text",
-        text: { body: message },
-      };
-
-      const headers = {
-        Authorization: `Bearer ${ACCESS_TOKEN}`,
-        "Content-Type": "application/json",
-      };
-
-      const response = await sendHttpsRequest(API_URL, "POST", data, headers);
-      console.log({
-        message: "Mensagem de texto respondida com sucesso!",
-        data: response,
-      });
-    } catch (error) {
-      console.error("Erro ao enviar mensagem de texto:", error.message);
-    }
-  }
-};
 
 class ChatBot_Controller {
   async verifyWebhook(req, res) {
@@ -76,18 +45,6 @@ class ChatBot_Controller {
                   cliente.retorno.id
                 );
 
-                // 3. Verifica se a mensagem do cliente já foi processada para evitar duplicação
-                const mensagemExistente =
-                  await chatbot_services.mensagemJaProcessada(
-                    sessao.id,
-                    cliente.retorno.id,
-                    messageBody
-                  );
-                if (mensagemExistente) {
-                  console.log("Mensagem já processada, ignorando...");
-                  continue;
-                }
-
                 // 4. Registra a mensagem recebida do cliente
                 await chatbot_services.registraMensagem(
                   sessao.id,
@@ -106,27 +63,20 @@ class ChatBot_Controller {
 
                 // 6. Determina a próxima pergunta
                 let proximaPergunta;
-                let nomeCli;
+                // let nomeCli;
                 if (ultimaMensagem) {
-                  if (ultimaMensagem.dataValues.resposta_id === 1) {
-                    //ARMAZENANDO NOME DO USUARIO NO BANCO
-                    const { conteudo_message } =
-                      await chatbot_services.buscaUltimaMensagemCliente(
-                        cliente.retorno.id,
-                        sessao.id
+                  if (ultimaMensagem.resposta_id === 20) {
+                    const responseIA =
+                      await chatbot_services.enviaMensagemComIA(messageBody);
+                    console.log(responseIA);
+                    proximaPergunta = { mensagem: responseIA };
+                  } else {
+                    proximaPergunta =
+                      await chatbot_services.buscaProximaResposta(
+                        ultimaMensagem.resposta_id,
+                        messageBody
                       );
-                    nomeCli = conteudo_message;
-                    await chatbot_services.atulizaRegistroCliente(
-                      conteudo_message,
-                      "nome",
-                      cliente.retorno.id
-                    );
                   }
-
-                  proximaPergunta = await chatbot_services.buscaProximaResposta(
-                    ultimaMensagem.resposta_id,
-                    messageBody
-                  );
                 } else {
                   // Primeira interação
                   proximaPergunta = await chatbot_services.buscaRespostaCliente(
@@ -135,16 +85,29 @@ class ChatBot_Controller {
                 }
 
                 if (proximaPergunta) {
+                  if (proximaPergunta.save_db) {
+                    const { conteudo_message } =
+                      await chatbot_services.buscaUltimaMensagemCliente(
+                        cliente.retorno.id,
+                        sessao.id
+                      );
+
+                    await chatbot_services.atulizaRegistroCliente(
+                      conteudo_message,
+                      proximaPergunta.save_where,
+                      cliente.retorno.id
+                    );
+                  }
+
                   // Inicializa a variável com a mensagem padrão
                   let msgVariable = proximaPergunta.mensagem;
 
                   // Substitui {resposta_anterior} caso a próxima pergunta tenha ID 2
 
-              
                   // Envia a próxima mensagem ao cliente
                   const mensagemFormatada =
                     await chatbot_services.processaMensagem(
-                      proximaPergunta.tipo,
+                      proximaPergunta.tipo ? proximaPergunta.tipo : "texto",
                       msgVariable, // Mensagem formatada ou original
                       proximaPergunta.opcoes || [], // Opções, se houver
                       cliente.retorno.id
@@ -153,7 +116,11 @@ class ChatBot_Controller {
                   await chatbot_services.respondeWhatsApp(
                     from,
                     mensagemFormatada,
-                    proximaPergunta.tipo === "texto" ? "text" : "interactive"
+                    proximaPergunta.tipo
+                      ? proximaPergunta.tipo === "texto"
+                        ? "text"
+                        : "interactive"
+                      : "text"
                   );
 
                   // 8. Registra a mensagem enviada pelo chatbot

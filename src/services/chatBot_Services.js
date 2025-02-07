@@ -1,8 +1,14 @@
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { amalfisCli } = require("../models/index.js");
 const { Op } = require("sequelize");
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 const API_URL = process.env.API_URL;
 const https = require("https");
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_URL = process.env.GEMINI_API_URL;
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 class ChatBot_Services {
   // Verifica se uma mensagem já foi processada
@@ -182,6 +188,7 @@ class ChatBot_Services {
     const resposta = await amalfisCli.ChatbotResposta.findOne({
       where: { id: idResposta },
     });
+
     if (!resposta) {
       console.log("Resposta não encontrada");
       return null;
@@ -230,7 +237,7 @@ class ChatBot_Services {
   }
 
   // Envia mensagem via WhatsApp
-  async respondeWhatsApp(to, message, type, sessaoId) {
+  async respondeWhatsApp(to, message, type) {
     // Verifica se é texto ou mensagem interativa
 
     try {
@@ -263,26 +270,19 @@ class ChatBot_Services {
   }
 
   // Processa tipo de mensagem (texto, botão, lista)
-  async processaMensagem(tipo, mensagem, opcoes,idCliente) {
-    
-    
-    const validaNomeCli = mensagem.includes('{nome_cli}');
+  async processaMensagem(tipo, mensagem, opcoes, idCliente) {
+    const validaNomeCli = mensagem.includes("{nome_cli}");
 
     let nomeCli;
-    if(validaNomeCli){
-      const cliente = await amalfisCli.ChatbotCliente.findOne({where: {id:idCliente}})
-      console.log(cliente);
-      nomeCli = cliente.nome
+    if (validaNomeCli) {
+      const cliente = await amalfisCli.ChatbotCliente.findOne({
+        where: { id: idCliente },
+      });
+      nomeCli = cliente.nome;
     }
-    
-    
-    
 
-    const msg = mensagem.replace(/\\n/g, "\n").replace(
-      "{nome_cli}",
-      nomeCli
-    );
- 
+    const msg = mensagem.replace(/\\n/g, "\n").replace("{nome_cli}", nomeCli);
+
     if (tipo === "texto") {
       return msg;
     } else if (tipo === "button") {
@@ -331,6 +331,33 @@ class ChatBot_Services {
       message.interactive?.list_reply?.id || // Lista com ID
       ""
     );
+  }
+
+  async enviaMensagemComIA(message) {
+    try {
+      const chat = model.startChat(); // Não é necessário histórico se estamos enviando um prompt completo
+
+      // Enviando o prompt corretamente
+      const respostaiA = await chat.sendMessage([
+        {
+          text: `
+              prompt:
+              🚨 Nunca use informações fora dessa base de conhecimento. Responda **apenas** com base nela.
+
+              ❓ Pergunta atual do usuário: "${message}"
+              `,
+        },
+      ]);
+
+      // 🚀 Correção: Acessando a resposta corretamente
+      const retorno = respostaiA.response.candidates[0].content.parts[0].text;
+
+      console.log(retorno);
+      return retorno;
+    } catch (error) {
+      console.error("Erro ao chamar a API do Gemini:", error);
+      return "Desculpe, não consegui processar sua solicitação no momento.";
+    }
   }
 }
 

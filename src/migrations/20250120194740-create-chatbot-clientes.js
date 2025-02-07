@@ -17,7 +17,15 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: true,
       },
+      tipo_entidade: {
+        type: Sequelize.TEXT,
+        allowNull: true,
+      },
       cnpj: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      cpf: {
         type: Sequelize.STRING,
         allowNull: true,
       },
@@ -26,7 +34,7 @@ module.exports = {
         allowNull: true,
       },
       qtde_colaborador: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.STRING,
         allowNull: true,
       },
       local_emp: {
