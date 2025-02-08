@@ -1,5 +1,5 @@
 const ChatBot_Services = require("../../services/devagile_services/chatBot_Services");
-const Controller = require("../controller");
+const Controller = require("../Controller");
 
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "SEU_ACCESS_TOKEN_AQUI";
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "SEU_VERIFY_TOKEN_AQUI";
