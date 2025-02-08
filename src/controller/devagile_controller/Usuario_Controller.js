@@ -1,5 +1,5 @@
 const Usuario_Services = require("../../services/devagile_services/usuario_Services");
-const Controller = require("../controller");
+const Controller = require("../Controller");
 const bcrypt = require("bcrypt");
 const camposObrigatorios = [
   "nome",

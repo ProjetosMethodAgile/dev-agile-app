@@ -1,5 +1,5 @@
 const Role_Services = require("../../services/devagile_services/role_Services.js");
-const Controller = require("../controller.js");
+const Controller = require("../Controller.js");
 
 const role_services = new Role_Services();
 const camposObrigatorios = ["nome", "descricao"];

@@ -1,4 +1,4 @@
-const Controller = require("../controller.js");
+const Controller = require("../Controller.js");
 const Empresa_Services = require("../../services/devagile_services/empresa_Services.js");
 
 const empresa_services = new Empresa_Services();
