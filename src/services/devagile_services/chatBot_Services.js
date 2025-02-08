@@ -1,19 +1,20 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { amalfisCli } = require("../models/index.js");
+const { devAgile } = require("../../models/index.js");
 const { Op } = require("sequelize");
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 const API_URL = process.env.API_URL;
 const https = require("https");
+const Services = require("../Services.js");
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL = process.env.GEMINI_API_URL;
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-class ChatBot_Services {
+class ChatBot_Services extends Services {
   // Verifica se uma mensagem já foi processada
   async mensagemJaProcessada(sessaoId, clienteId, conteudoMessage) {
-    const mensagemExistente = await amalfisCli.ChatbotMensagem.findOne({
+    const mensagemExistente = await devAgile.ChatbotMensagem.findOne({
       where: {
         sessao_id: sessaoId,
         cliente_id: clienteId,
@@ -66,12 +67,12 @@ class ChatBot_Services {
 
   // Busca ou cria cliente
   async buscaOuCriaCliente(numContato) {
-    let cliente = await amalfisCli.ChatbotCliente.findOne({
+    let cliente = await devAgile.ChatbotCliente.findOne({
       where: { numero_contato: numContato },
     });
 
     if (!cliente) {
-      cliente = await amalfisCli.ChatbotCliente.create({
+      cliente = await devAgile.ChatbotCliente.create({
         numero_contato: numContato,
         nome: null,
         cnpj: null,
@@ -89,12 +90,12 @@ class ChatBot_Services {
 
   // Busca ou cria sessão
   async buscaOuCriaSessao(clienteId) {
-    let sessao = await amalfisCli.ChatbotSessao.findOne({
+    let sessao = await devAgile.ChatbotSessao.findOne({
       where: { cliente_id: clienteId, status: true },
     });
 
     if (!sessao) {
-      sessao = await amalfisCli.ChatbotSessao.create({
+      sessao = await devAgile.ChatbotSessao.create({
         cliente_id: clienteId,
         atendente_id: null,
         status: true,
@@ -106,7 +107,7 @@ class ChatBot_Services {
   }
 
   async atulizaRegistroCliente(value, column, clienteId) {
-    const [rowsAtualizada] = await amalfisCli.ChatbotCliente.update(
+    const [rowsAtualizada] = await devAgile.ChatbotCliente.update(
       {
         [column]: value,
       },
@@ -140,7 +141,7 @@ class ChatBot_Services {
     }
 
     try {
-      const mensagem = await amalfisCli.ChatbotMensagem.create({
+      const mensagem = await devAgile.ChatbotMensagem.create({
         sessao_id: sessaoId,
         cliente_id: clienteId,
         resposta_id: respostaId || null, // Permite que resposta_id seja nulo
@@ -157,7 +158,7 @@ class ChatBot_Services {
 
   // Recupera última mensagem do chatbot
   async recuperaUltimaMensagemChatbot(clienteId, sessaoId) {
-    const ultimaMensagem = await amalfisCli.ChatbotMensagem.findOne({
+    const ultimaMensagem = await devAgile.ChatbotMensagem.findOne({
       where: {
         cliente_id: clienteId,
         sessao_id: sessaoId,
@@ -172,7 +173,7 @@ class ChatBot_Services {
   // Recupera última mensagem do cliente
 
   async buscaUltimaMensagemCliente(clienteId, sessaoId) {
-    const mensagemCli = await amalfisCli.ChatbotMensagem.findOne({
+    const mensagemCli = await devAgile.ChatbotMensagem.findOne({
       where: {
         cliente_id: clienteId,
         sessao_id: sessaoId,
@@ -185,7 +186,7 @@ class ChatBot_Services {
 
   // Busca resposta por ID
   async buscaRespostaCliente(idResposta) {
-    const resposta = await amalfisCli.ChatbotResposta.findOne({
+    const resposta = await devAgile.ChatbotResposta.findOne({
       where: { id: idResposta },
     });
 
@@ -205,7 +206,7 @@ class ChatBot_Services {
       return null;
     }
 
-    const resposta = await amalfisCli.ChatbotResposta.findOne({
+    const resposta = await devAgile.ChatbotResposta.findOne({
       where: { id: idResposta },
     });
 
@@ -219,7 +220,7 @@ class ChatBot_Services {
       respostasPossiveis[respostaUsuario] || resposta.resposta_padrao;
 
     if (proximaRespostaId) {
-      const proximaResposta = await amalfisCli.ChatbotResposta.findOne({
+      const proximaResposta = await devAgile.ChatbotResposta.findOne({
         where: { id: proximaRespostaId },
       });
 
@@ -275,7 +276,7 @@ class ChatBot_Services {
 
     let nomeCli;
     if (validaNomeCli) {
-      const cliente = await amalfisCli.ChatbotCliente.findOne({
+      const cliente = await devAgile.ChatbotCliente.findOne({
         where: { id: idCliente },
       });
       nomeCli = cliente.nome;

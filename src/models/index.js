@@ -54,11 +54,11 @@ const initializeModels = (sequelizeInstance, dirname) => {
 
 // Inicializa os models para cada banco de dados
 const modelsSisplan = initializeModels(sequelizeERP, __dirname);
-const modelsAmalfisCli = initializeModels(sequelizeDevAgileCli, __dirname);
+const modelsdevAgile = initializeModels(sequelizeDevAgileCli, __dirname);
 
 // Adiciona os models ao objeto db para exportação
 db.sisplan = modelsSisplan;
-db.amalfisCli = modelsAmalfisCli;
+db.devAgile = modelsdevAgile;
 db.sequelizeERP = sequelizeERP;
 db.sequelizeDevAgileCli = sequelizeDevAgileCli;
 db.Sequelize = Sequelize;

@@ -1,4 +1,5 @@
-const ChatBot_Services = require("../services/chatBot_Services");
+const ChatBot_Services = require("../../services/devagile_services/chatBot_Services");
+const Controller = require("../controller");
 
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "SEU_ACCESS_TOKEN_AQUI";
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "SEU_VERIFY_TOKEN_AQUI";
@@ -6,7 +7,7 @@ const API_URL = process.env.API_URL;
 
 const chatbot_services = new ChatBot_Services();
 
-class ChatBot_Controller {
+class ChatBot_Controller extends Controller {
   async verifyWebhook(req, res) {
     const mode = req.query["hub.mode"];
     const token = req.query["hub.verify_token"];
