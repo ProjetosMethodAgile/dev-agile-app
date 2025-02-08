@@ -1,6 +1,6 @@
 require("dotenv").config(); // Carrega as variáveis de ambiente do arquivo .env
 
-const app = require("./app.js"); // Importa a aplicação Express
+const app = require("./src/app.js"); // Importa a aplicação Express
 
 const PORT = 3000;
 const https = require("https");
