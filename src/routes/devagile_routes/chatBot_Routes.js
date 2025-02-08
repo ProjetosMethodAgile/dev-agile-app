@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const ChatBot_Controller = require("../../controller/devagile_controller/ChatBot_Controller.js");
+const ChatBot_Controller = require("../../controller/devagile_controller/ChatBot_Controller");
 
 const route = Router();
 
