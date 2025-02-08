@@ -1,5 +1,5 @@
 const { devAgile } = require("../../models/index.js");
-const Permissao_Services = require("../../services/devagile_services/permissao_Services.js");
+const Permissao_Services = require("../../services/devagile_services/Permissao_Services.js");
 const Controller = require("../Controller.js");
 
 const permissao_services = new Permissao_Services();

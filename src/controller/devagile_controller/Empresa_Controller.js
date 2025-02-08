@@ -1,5 +1,5 @@
 const Controller = require("../Controller.js");
-const Empresa_Services = require("../../services/devagile_services/empresa_Services.js");
+const Empresa_Services = require("../../services/devagile_services/Empresa_Services.js");
 
 const empresa_services = new Empresa_Services();
 const camposObrigatorios = ["nome", "descricao", "endereco", "cnpj"];
