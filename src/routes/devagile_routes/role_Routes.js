@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const checkTokenLogin = require("../../middlewares/checkTokenLogin.js");
-const Role_Controller = require("../../controller/devagile_controller/role_Controller.js");
+const Role_Controller = require("../../controller/devagile_controller/Role_Controller.js");
 
 const role_controller = new Role_Controller();
 const route = Router();
