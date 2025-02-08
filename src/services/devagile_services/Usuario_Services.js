@@ -7,6 +7,101 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 class Usuario_Services extends Services {
+  async pegaTodosUsuarios_Services() {
+    try {
+      const usuarios = await devAgile.Usuario.findAll({
+        attributes: [
+          "id",
+          "nome",
+          "email",
+          "contato",
+          "createdAt",
+          "updatedAt",
+        ],
+        include: [
+          {
+            model: devAgile.Empresa,
+            as: "empresas",
+            attributes: ["id", "nome", "cnpj"],
+            through: { attributes: [] },
+          },
+          {
+            model: devAgile.Role,
+            as: "usuario_roles",
+            attributes: ["id", "nome", "descricao"],
+            through: { attributes: [] },
+          },
+          {
+            model: devAgile.Permissao,
+            as: "usuario_permissoes",
+            attributes: ["id", "nome", "descricao"],
+            through: { attributes: [] },
+            include: [
+              {
+                model: devAgile.UserPermissionAccess,
+                as: "user_permissions_access",
+                attributes: [
+                  "can_create",
+                  "can_read",
+                  "can_update",
+                  "can_delete",
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      if (!usuarios.length) {
+        return { status: false, usuarios: [] };
+      }
+
+      // Formata cada usuário com as permissões agrupadas por tela
+      const formattedUsuarios = usuarios.map((usuario) => {
+        const permissoesPorTela = usuario.usuario_permissoes.reduce(
+          (acc, permissao) => {
+            const telaNome = permissao.nome;
+
+            if (!acc[telaNome]) {
+              acc[telaNome] = {
+                tela: telaNome,
+                permissoes: [],
+              };
+            }
+
+            const crudPermissions = permissao.user_permissions_access[0];
+            acc[telaNome].permissoes.push({
+              permissao_id: permissao.id,
+              can_create: crudPermissions?.can_create || false,
+              can_read: crudPermissions?.can_read || false,
+              can_update: crudPermissions?.can_update || false,
+              can_delete: crudPermissions?.can_delete || false,
+            });
+
+            return acc;
+          },
+          {}
+        );
+
+        return {
+          id: usuario.id,
+          nome: usuario.nome,
+          email: usuario.email,
+          contato: usuario.contato,
+          empresa: usuario.empresas,
+          usuario_roles: usuario.usuario_roles,
+          usuario_permissoes_por_tela: Object.values(permissoesPorTela),
+          createdAt: usuario.createdAt,
+          updatedAt: usuario.updatedAt,
+        };
+      });
+
+      return { status: true, usuarios: formattedUsuarios };
+    } catch (error) {
+      console.log(error);
+      throw new Error("Erro ao buscar usuários");
+    }
+  }
   async cadastraUsuario_Services(bodyReq, permissoesCRUD) {
     const transaction = await sequelizeDevAgileCli.transaction(); // Inicia a transação
 
@@ -146,6 +241,12 @@ class Usuario_Services extends Services {
       where: { id: id },
       include: [
         {
+          model: devAgile.Empresa,
+          as: "empresas",
+          attributes: ["id", "nome", "cnpj"],
+          through: { attributes: [] },
+        },
+        {
           model: devAgile.Role,
           as: "usuario_roles",
           attributes: ["id", "nome", "descricao"],
@@ -212,12 +313,109 @@ class Usuario_Services extends Services {
         nome: usuario.nome,
         email: usuario.email,
         contato: usuario.contato,
-        createdAt: usuario.createdAt,
-        updatedAt: usuario.updatedAt,
+        empresa: usuario.empresas,
         usuario_roles: usuario.usuario_roles,
         usuario_permissoes_por_tela: Object.values(permissoesPorTela),
+        createdAt: usuario.createdAt,
+        updatedAt: usuario.updatedAt,
       },
     };
+  }
+
+  async atualizaUsuario_Services(userId, data) {
+    const transaction = await sequelizeDevAgileCli.transaction();
+    try {
+      // 1. Atualizar dados básicos do usuário
+      await devAgile.Usuario.update(
+        {
+          nome: data.nome,
+          email: data.email,
+          cargo: data.cargo,
+          empresa_id: data.empresa_id,
+        },
+        { where: { id: userId }, transaction }
+      );
+
+      // 2. Atualizar permissões CRUD
+      if (data.permissoesCRUD) {
+        // Verifique se `usuarios_permissoes` está importado diretamente do `models/index.js`
+        await devAgile.usuarios_permissoes.destroy({
+          where: { usuario_id: userId },
+          transaction,
+        });
+
+        await devAgile.usuarios_permissoes.bulkCreate(
+          data.permissoesCRUD.map((perm) => ({
+            usuario_id: userId,
+            permissao_id: perm.permissao_id,
+            can_create: perm.can_create,
+            can_read: perm.can_read,
+            can_update: perm.can_update,
+            can_delete: perm.can_delete,
+          })),
+          { transaction }
+        );
+      }
+
+      // Commit da transação
+      await transaction.commit();
+      return { status: true };
+    } catch (error) {
+      await transaction.rollback();
+      console.error("Erro ao atualizar usuário:", error);
+      return { status: false, message: "Erro ao atualizar usuário" };
+    }
+  }
+
+  async deletaUsuarioPorId_Services(id) {
+    return devAgile.Usuario.destroy({ where: { id: id } });
+  }
+
+  async validaSenhaUsuario_Services(email, senha) {
+    const retorno = await devAgile.Usuario.findAll({
+      attributes: ["id", "nome", "email"],
+      where: { email: email },
+    });
+
+    if (retorno === null) {
+      console.log("E-mail não encontrado na base de dados");
+      return { status: false, retorno: retorno };
+    }
+
+    const pwd = await devAgile.Usuario.findAll({
+      attributes: ["senha"],
+      where: { email: email },
+    });
+    const senhaDB = pwd[0].dataValues.senha;
+    const checkSenha = await bcrypt.compare(senha, senhaDB);
+    if (!checkSenha)
+      return { status: false, message: "usuario ou senha incorreto!" };
+
+    try {
+      const secret = process.env.SECRET_LOGIN;
+      let token = "";
+      const TokenExpirationTime = "1d";
+      if (checkSenha) {
+        token = jwt.sign(
+          {
+            id: retorno[0].dataValues.id,
+            nome: retorno[0].dataValues.nome,
+            email: retorno[0].dataValues.email,
+          },
+          secret,
+          { expiresIn: TokenExpirationTime }
+        );
+      }
+
+      return {
+        message: "Autentiação realizada com sucesso",
+        token,
+        status: true,
+      };
+    } catch (e) {
+      console.log(e);
+      return { status: false, error: e.message };
+    }
   }
 }
 

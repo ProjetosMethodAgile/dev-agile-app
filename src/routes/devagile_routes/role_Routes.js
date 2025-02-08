@@ -21,7 +21,7 @@ route.delete("/api/roles/:id", checkTokenLogin, (req, res) =>
   role_controller.deletaRolePorId_Controller(req, res)
 );
 
-// rota para buscar permissões associadas a uma role
+// rota para buscar permissões(telas) associadas a uma role(cargo)
 route.get("/api/roles/:id/permissoes", checkTokenLogin, (req, res) =>
   role_controller.pegaPermissoesPorRole_Controller(req, res)
 );
