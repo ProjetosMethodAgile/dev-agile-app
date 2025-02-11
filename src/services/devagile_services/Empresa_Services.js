@@ -45,6 +45,11 @@ class Empresa_Services extends Services {
     return await devAgile[this.nomeModel].findByPk(id);
   }
 
+  // Pegar empresa por ID
+  async pegaEmpresaPorTag_Services(tag) {
+    return await devAgile[this.nomeModel].findOne({ where: { tag: tag } });
+  }
+
   // Deletar empresa por ID
   async deletaEmpresaPorId_Services(id) {
     const usuario = await devAgile.Usuario_Empresa.findAll({

@@ -96,6 +96,26 @@ class Empresa_Controller extends Controller {
     }
   }
 
+  // Buscar empresa por TAG
+  async pegaEmpresaPorTag_Controller(req, res) {
+    const { tag } = req.params;
+    try {
+      const empresa = await empresa_services.pegaEmpresaPorTag_Services(tag);
+      if (!empresa) {
+        return res.status(400).json({
+          message: `Não foi possível encontrar a empresa com a tag: ${tag}`,
+        });
+      } else {
+        return res.status(200).json(empresa);
+      }
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({
+        message: "Erro ao buscar empresa, contate o administrador do sistema",
+      });
+    }
+  }
+
   // Deletar empresa por ID
   async deletaEmpresaPorId_Controller(req, res) {
     const { id } = req.params;
