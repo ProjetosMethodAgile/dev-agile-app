@@ -23,6 +23,20 @@ module.exports = {
         type: Sequelize.STRING,
         unique: true,
       },
+      tag: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true, // opcional, mas recomendado para identificar a empresa na URL
+      },
+      logo: {
+        type: Sequelize.STRING,
+      },
+      cor_primaria: {
+        type: Sequelize.STRING,
+      },
+      cor_secundaria: {
+        type: Sequelize.STRING,
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,

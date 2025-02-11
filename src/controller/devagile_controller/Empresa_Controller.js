@@ -2,7 +2,8 @@ const Controller = require("../Controller.js");
 const Empresa_Services = require("../../services/devagile_services/Empresa_Services.js");
 
 const empresa_services = new Empresa_Services();
-const camposObrigatorios = ["nome", "descricao", "endereco", "cnpj"];
+// Incluímos "tag" na lista de campos obrigatórios, pois é um campo obrigatório na migration.
+const camposObrigatorios = ["nome", "descricao", "endereco", "cnpj", "tag"];
 
 class Empresa_Controller extends Controller {
   constructor() {
@@ -28,12 +29,25 @@ class Empresa_Controller extends Controller {
     const isTrue = await this.allowNull(req, res);
     try {
       if (isTrue.status) {
-        const { nome, descricao, endereco, cnpj } = req.body;
+        const {
+          nome,
+          descricao,
+          endereco,
+          cnpj,
+          tag,
+          logo,
+          cor_primaria,
+          cor_secundaria,
+        } = req.body;
         const empresa = await empresa_services.criaEmpresa_Services({
           nome,
           descricao,
           endereco,
           cnpj,
+          tag,
+          logo,
+          cor_primaria,
+          cor_secundaria,
         });
         if (empresa.error) {
           return res.status(500).json({
@@ -104,13 +118,26 @@ class Empresa_Controller extends Controller {
   async atualizaEmpresaPorId_Controller(req, res) {
     const { id } = req.params;
     try {
-      const { nome, descricao, endereco, cnpj } = req.body;
+      const {
+        nome,
+        descricao,
+        endereco,
+        cnpj,
+        tag,
+        logo,
+        cor_primaria,
+        cor_secundaria,
+      } = req.body;
       const empresaAtualizada =
         await empresa_services.atualizaEmpresaPorId_Services(id, {
           nome,
           descricao,
           endereco,
           cnpj,
+          tag,
+          logo,
+          cor_primaria,
+          cor_secundaria,
         });
       if (!empresaAtualizada) {
         return res

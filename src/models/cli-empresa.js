@@ -18,6 +18,10 @@ module.exports = (sequelize, DataTypes) => {
       descricao: DataTypes.STRING,
       endereco: DataTypes.STRING,
       cnpj: DataTypes.STRING,
+      tag: DataTypes.STRING,
+      logo: DataTypes.STRING,
+      cor_primaria: DataTypes.STRING,
+      cor_secundaria: DataTypes.STRING,
     },
     {
       sequelize,

@@ -9,6 +9,7 @@ class Empresa_Services extends Services {
 
   // Criar uma nova empresa
   async criaEmpresa_Services(dados) {
+    // Verifica se já existe uma empresa com o mesmo nome
     const empresaExistente = await devAgile[this.nomeModel].findOne({
       where: {
         nome: dados.nome,
@@ -25,6 +26,10 @@ class Empresa_Services extends Services {
         descricao: dados.descricao,
         endereco: dados.endereco,
         cnpj: dados.cnpj,
+        tag: dados.tag,
+        logo: dados.logo,
+        cor_primaria: dados.cor_primaria,
+        cor_secundaria: dados.cor_secundaria,
       });
       return { error: false, empresa: novaEmpresa };
     }
@@ -49,7 +54,7 @@ class Empresa_Services extends Services {
       return {
         error: true,
         message:
-          "essa empresa possui usuarios vinculados, impossivel exclui-la ",
+          "Essa empresa possui usuários vinculados, impossível excluí-la",
       };
     } else {
       const empresa = await devAgile[this.nomeModel].destroy({
@@ -58,7 +63,7 @@ class Empresa_Services extends Services {
       return {
         empresa: empresa,
         error: false,
-        message: "empresa deletada com sucesso",
+        message: "Empresa deletada com sucesso",
       };
     }
   }
