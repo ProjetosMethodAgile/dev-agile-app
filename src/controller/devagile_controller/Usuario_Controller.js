@@ -119,30 +119,51 @@ class Usuario_Controller extends Controller {
   }
 
   async loginUsuario_Controller(req, res) {
-    const { email, senha } = req.body;
-    let emailExist = "";
+    const { email, senha, empresaId } = req.body;
 
     if (!email)
       return res.status(422).json({ message: "Por favor, insira um email" });
     if (!senha)
       return res.status(422).json({ message: "Por favor, preencha uma senha" });
-    if (email)
-      emailExist = await usuario_services.pegaUsuarioPorEmail_Services(email);
+    if (!empresaId)
+      return res.status(422).json({ message: "Informe a empresa" });
 
-    let checkSenha = "";
-    if (emailExist.status) {
-      checkSenha = await usuario_services.validaSenhaUsuario_Services(
-        email,
-        senha
-      );
+    // Busca o usuário pelo email, incluindo as empresas associadas
+    const emailExist = await usuario_services.pegaUsuarioPorEmail_Services(
+      email
+    );
+    if (!emailExist.status) {
+      return res
+        .status(401)
+        .json({ error: true, message: "E-mail ou Senha incorreta" });
     }
+
+    // O objeto retornado deve conter a associação com empresas
+    const usuario = emailExist.retorno;
+
+    // Verifica se o usuário está associado à empresa informada (empresaId)
+    if (
+      !usuario.empresas ||
+      !usuario.empresas.some((empresa) => empresa.id === empresaId)
+    ) {
+      return res
+        .status(401)
+        .json({ error: true, message: "E-mail ou Senha incorreta" });
+    }
+
+    // Valida a senha (método já existente)
+    const checkSenha = await usuario_services.validaSenhaUsuario_Services(
+      email,
+      senha
+    );
     if (!checkSenha.status) {
       return res
         .status(401)
         .json({ error: true, message: "E-mail ou Senha incorreta" });
     }
+
     return res.status(200).json({
-      message: "Autentiação realizada com sucesso",
+      message: "Autenticação realizada com sucesso",
       token: checkSenha.token,
       error: false,
     });

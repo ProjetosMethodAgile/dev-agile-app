@@ -226,12 +226,31 @@ class Usuario_Services extends Services {
   }
 
   async pegaUsuarioPorEmail_Services(email) {
-    const retorno = await devAgile.Usuario.findOne({ where: { email: email } });
+    const retorno = await devAgile.Usuario.findOne({
+      where: { email },
+      include: [
+        {
+          model: devAgile.Empresa,
+          as: "empresas",
+          attributes: [
+            "id",
+            "nome",
+            "cnpj",
+            "tag",
+            "logo",
+            "cor_primaria",
+            "cor_secundaria",
+          ],
+          through: { attributes: [] },
+        },
+      ],
+    });
+
     if (retorno === null) {
-      console.log("email não encontrado na base de dados");
-      return { status: false, retorno: retorno };
+      console.log("Email não encontrado na base de dados");
+      return { status: false, retorno: null };
     } else {
-      console.log("email foi encontrado na base de dados");
+      console.log("Email foi encontrado na base de dados");
       return { status: true, retorno: retorno };
     }
   }
