@@ -128,7 +128,7 @@ class Usuario_Controller extends Controller {
     if (!empresaId)
       return res.status(422).json({ message: "Informe a empresa" });
 
-    // Busca o usuário pelo email, incluindo as empresas associadas
+    // Busca o usuário pelo e-mail (já com as empresas associadas, conforme seu serviço)
     const emailExist = await usuario_services.pegaUsuarioPorEmail_Services(
       email
     );
@@ -138,23 +138,22 @@ class Usuario_Controller extends Controller {
         .json({ error: true, message: "E-mail ou Senha incorreta" });
     }
 
-    // O objeto retornado deve conter a associação com empresas
     const usuario = emailExist.retorno;
-
-    // Verifica se o usuário está associado à empresa informada (empresaId)
+    // Verifica se o usuário está associado à empresa informada
     if (
       !usuario.empresas ||
       !usuario.empresas.some((empresa) => empresa.id === empresaId)
     ) {
       return res
         .status(401)
-        .json({ error: true, message: "E-mail ou Senha incorreta" });
+        .json({ error: true, message: "Usuário não encontrado" });
     }
 
-    // Valida a senha (método já existente)
+    // Valida a senha e gera o token com o empresaId incluso
     const checkSenha = await usuario_services.validaSenhaUsuario_Services(
       email,
-      senha
+      senha,
+      empresaId
     );
     if (!checkSenha.status) {
       return res

@@ -390,17 +390,17 @@ class Usuario_Services extends Services {
     return devAgile.Usuario.destroy({ where: { id: id } });
   }
 
-  async validaSenhaUsuario_Services(email, senha) {
+  async validaSenhaUsuario_Services(email, senha, empresaId) {
     const retorno = await devAgile.Usuario.findAll({
       attributes: ["id", "nome", "email"],
       where: { email: email },
     });
-
-    if (retorno === null) {
+    if (retorno === null || retorno.length === 0) {
       console.log("E-mail não encontrado na base de dados");
-      return { status: false, retorno: retorno };
+      return { status: false, message: "Usuário ou senha incorreto!" };
     }
 
+    // Busca a senha armazenada
     const pwd = await devAgile.Usuario.findAll({
       attributes: ["senha"],
       where: { email: email },
@@ -408,26 +408,25 @@ class Usuario_Services extends Services {
     const senhaDB = pwd[0].dataValues.senha;
     const checkSenha = await bcrypt.compare(senha, senhaDB);
     if (!checkSenha)
-      return { status: false, message: "usuario ou senha incorreto!" };
+      return { status: false, message: "Usuário ou senha incorreto!" };
 
     try {
       const secret = process.env.SECRET_LOGIN;
-      let token = "";
       const TokenExpirationTime = "1d";
-      if (checkSenha) {
-        token = jwt.sign(
-          {
-            id: retorno[0].dataValues.id,
-            nome: retorno[0].dataValues.nome,
-            email: retorno[0].dataValues.email,
-          },
-          secret,
-          { expiresIn: TokenExpirationTime }
-        );
-      }
+      // Gera o token incluindo o ID da empresa no _payload_
+      const token = jwt.sign(
+        {
+          id: retorno[0].dataValues.id,
+          nome: retorno[0].dataValues.nome,
+          email: retorno[0].dataValues.email,
+          empresa: empresaId, // <- Informação da empresa logada
+        },
+        secret,
+        { expiresIn: TokenExpirationTime }
+      );
 
       return {
-        message: "Autentiação realizada com sucesso",
+        message: "Autenticação realizada com sucesso",
         token,
         status: true,
       };
