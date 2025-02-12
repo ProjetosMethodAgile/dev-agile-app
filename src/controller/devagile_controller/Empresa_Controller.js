@@ -51,7 +51,7 @@ class Empresa_Controller extends Controller {
         });
         if (empresa.error) {
           return res.status(500).json({
-            message: "Já existe uma empresa com o nome informado",
+            message: "Já existe uma empresa com o CNPJ informado",
             error: empresa.error,
           });
         } else {

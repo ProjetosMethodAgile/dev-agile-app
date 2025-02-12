@@ -9,15 +9,15 @@ class Empresa_Services extends Services {
 
   // Criar uma nova empresa
   async criaEmpresa_Services(dados) {
-    // Verifica se já existe uma empresa com o mesmo nome
+    // Verifica se já existe uma empresa com o mesmo CNPJ
     const empresaExistente = await devAgile[this.nomeModel].findOne({
       where: {
-        nome: dados.nome,
+        cnpj: dados.cnpj,
       },
     });
 
     if (empresaExistente !== null) {
-      console.log("Já existe uma empresa com o nome informado");
+      console.log("Já existe uma empresa com o CNPJ informado");
       return { error: true, empresa: empresaExistente };
     } else {
       const novaEmpresa = await devAgile[this.nomeModel].create({
@@ -45,7 +45,7 @@ class Empresa_Services extends Services {
     return await devAgile[this.nomeModel].findByPk(id);
   }
 
-  // Pegar empresa por ID
+  // Pegar empresa por tag
   async pegaEmpresaPorTag_Services(tag) {
     return await devAgile[this.nomeModel].findOne({ where: { tag: tag } });
   }
