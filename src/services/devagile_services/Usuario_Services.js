@@ -262,7 +262,15 @@ class Usuario_Services extends Services {
         {
           model: devAgile.Empresa,
           as: "empresas",
-          attributes: ["id", "nome", "cnpj"],
+          attributes: [
+            "id",
+            "nome",
+            "cnpj",
+            "tag",
+            "logo",
+            "cor_primaria",
+            "cor_secundaria",
+          ],
           through: { attributes: [] },
         },
         {
