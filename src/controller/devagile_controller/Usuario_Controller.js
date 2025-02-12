@@ -119,7 +119,7 @@ class Usuario_Controller extends Controller {
   }
 
   async loginUsuario_Controller(req, res) {
-    const { email, senha, empresaId } = req.body;
+    const { email, senha, empresaId, empresaTag } = req.body;
 
     if (!email)
       return res.status(422).json({ message: "Por favor, insira um email" });
@@ -127,6 +127,8 @@ class Usuario_Controller extends Controller {
       return res.status(422).json({ message: "Por favor, preencha uma senha" });
     if (!empresaId)
       return res.status(422).json({ message: "Informe a empresa" });
+    if (!empresaTag)
+      return res.status(422).json({ message: "Informe a tag da empresa" });
 
     // Busca o usuário pelo e-mail (já com as empresas associadas, conforme seu serviço)
     const emailExist = await usuario_services.pegaUsuarioPorEmail_Services(
@@ -153,7 +155,8 @@ class Usuario_Controller extends Controller {
     const checkSenha = await usuario_services.validaSenhaUsuario_Services(
       email,
       senha,
-      empresaId
+      empresaId,
+      empresaTag
     );
     if (!checkSenha.status) {
       return res

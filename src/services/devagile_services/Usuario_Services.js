@@ -398,7 +398,7 @@ class Usuario_Services extends Services {
     return devAgile.Usuario.destroy({ where: { id: id } });
   }
 
-  async validaSenhaUsuario_Services(email, senha, empresaId) {
+  async validaSenhaUsuario_Services(email, senha, empresaId, empresaTag) {
     const retorno = await devAgile.Usuario.findAll({
       attributes: ["id", "nome", "email"],
       where: { email: email },
