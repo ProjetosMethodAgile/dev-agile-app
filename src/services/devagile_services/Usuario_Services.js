@@ -421,13 +421,13 @@ class Usuario_Services extends Services {
     try {
       const secret = process.env.SECRET_LOGIN;
       const TokenExpirationTime = "1d";
-      // Gera o token incluindo o ID da empresa no _payload_
       const token = jwt.sign(
         {
           id: retorno[0].dataValues.id,
-          nome: retorno[0].dataValues.nome,
-          email: retorno[0].dataValues.email,
-          empresa: empresaId, // <- Informação da empresa logada
+          empresa: {
+            id: empresaId, // ID da empresa escolhida no login
+            tag: empresaTag, // Tag da empresa escolhida no login
+          },
         },
         secret,
         { expiresIn: TokenExpirationTime }
