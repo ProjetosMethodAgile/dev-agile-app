@@ -103,29 +103,21 @@ class Usuario_Services extends Services {
     }
   }
   async cadastraUsuario_Services(bodyReq, permissoesCRUD) {
-    const transaction = await sequelizeDevAgileCli.transaction(); // Inicia a transação
-
+    const transaction = await sequelizeDevAgileCli.transaction();
     try {
-      // Valida se os role_id são UUIDs válidos
+      // Valida se os role_id e permissao_id são válidos
       if (!bodyReq.roles_id.every((id) => isUuid(id))) {
         return { status: false, message: "Informe um cargo válido." };
       }
-
-      // Valida se os permissao_id são UUIDs válidos
       if (!bodyReq.permissoes_id.every((id) => isUuid(id))) {
         return { status: false, message: "Informe uma permissão válida." };
       }
 
-      // Verifica se role_id existe no banco de dados
+      // Verifica se as roles existem
       const roles = await devAgile.Role.findAll({
-        where: {
-          id: {
-            [Op.in]: bodyReq.roles_id,
-          },
-        },
+        where: { id: { [Op.in]: bodyReq.roles_id } },
         transaction,
       });
-
       if (roles.length !== bodyReq.roles_id.length) {
         return {
           status: false,
@@ -133,16 +125,11 @@ class Usuario_Services extends Services {
         };
       }
 
-      // Verifica se permissao_id existe no banco de dados
+      // Verifica se as permissões (telas) existem
       const permissoes = await devAgile.Permissao.findAll({
-        where: {
-          id: {
-            [Op.in]: bodyReq.permissoes_id,
-          },
-        },
+        where: { id: { [Op.in]: bodyReq.permissoes_id } },
         transaction,
       });
-
       if (permissoes.length !== bodyReq.permissoes_id.length) {
         return {
           status: false,
@@ -150,45 +137,39 @@ class Usuario_Services extends Services {
         };
       }
 
-      // Verifica se o empresa_id é válido e se existe no banco de dados
+      // Verifica a existência da empresa
       if (!isUuid(bodyReq.empresa_id)) {
         return { status: false, message: "Informe uma empresa válida." };
       }
-
       const empresa = await devAgile.Empresa.findByPk(bodyReq.empresa_id, {
         transaction,
       });
-
       if (!empresa) {
         return { status: false, message: "Empresa não encontrada." };
       }
 
-      // Cria o usuário dentro da transação
+      // Cria o usuário (com id gerado via uuid.v4() e demais dados)
       const usuario = await devAgile.Usuario.create(
         { id: uuid.v4(), ...bodyReq },
         { transaction }
       );
-
-      if (usuario === null) {
-        console.log("usuário não cadastrado");
-        await transaction.rollback(); // Faz o rollback caso o usuário não seja criado
-        return { status: false };
+      if (!usuario) {
+        await transaction.rollback();
+        return { status: false, message: "Erro ao cadastrar o usuário" };
       }
 
-      // Adiciona roles ao usuário
+      // Associa roles ao usuário
       await usuario.addUsuario_roles(bodyReq.roles_id, { transaction });
-
-      // Adiciona permissões ao usuário
+      // Associa permissões (telas) ao usuário
       await usuario.addUsuario_permissoes(bodyReq.permissoes_id, {
         transaction,
       });
 
-      // Adiciona as permissões CRUD ao usuário
+      // Cria as permissões CRUD para a tela (UserPermissionAccess)
       if (permissoesCRUD && permissoesCRUD.length) {
         for (const permissao of permissoesCRUD) {
           const { permissao_id, can_create, can_read, can_update, can_delete } =
             permissao;
-
           await devAgile.UserPermissionAccess.create(
             {
               usuario_id: usuario.id,
@@ -205,23 +186,36 @@ class Usuario_Services extends Services {
 
       // Vincula o usuário à empresa
       await devAgile.Usuario_Empresa.create(
-        {
-          usuario_id: usuario.id,
-          empresa_id: bodyReq.empresa_id,
-        },
+        { usuario_id: usuario.id, empresa_id: bodyReq.empresa_id },
         { transaction }
       );
 
-      // Commit na transação se tudo deu certo
+      // NOVO: Vincula as ações unitárias (UserAcaoTela) se fornecidas no body.
+      // Suponha que o corpo da requisição contenha um array "acoesTela",
+      // onde cada objeto possui ao menos a propriedade "acao_tela_id".
+      if (
+        bodyReq.acoesTela &&
+        Array.isArray(bodyReq.acoesTela) &&
+        bodyReq.acoesTela.length > 0
+      ) {
+        await devAgile.UserAcaoTela.bulkCreate(
+          bodyReq.acoesTela.map((acao) => ({
+            usuario_id: usuario.id,
+            acao_tela_id: acao.acao_tela_id, // Certifique-se de que esse campo está presente no objeto
+          })),
+          { transaction }
+        );
+      }
+
+      // Commit na transação se tudo der certo
       await transaction.commit();
-      console.log("usuário cadastrado com sucesso");
       return { status: true };
     } catch (e) {
-      await transaction.rollback(); // Faz o rollback caso ocorra qualquer erro
+      await transaction.rollback();
       console.error("Erro na associação", e);
       return { status: false, message: "Erro na associação", error: e.message };
     } finally {
-      if (!transaction.finished) await transaction.rollback(); // Assegura que a transação seja finalizada
+      if (!transaction.finished) await transaction.rollback();
     }
   }
 

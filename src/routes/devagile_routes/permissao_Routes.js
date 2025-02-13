@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const checkTokenLogin = require("../../middlewares/checkTokenLogin.js");
 const Permissao_Controller = require("../../controller/devagile_controller/Permissao_Controller.js");
+const authorize = require("../../middlewares/authorize.js");
 
 const permissao_controller = new Permissao_Controller();
 
@@ -10,7 +11,7 @@ route.post("/api/permissoes", checkTokenLogin, (req, res) =>
   permissao_controller.criaPermissao_Controller(req, res)
 );
 
-route.get("/api/permissoes", checkTokenLogin, (req, res) =>
+route.get("/api/permissoes", checkTokenLogin, authorize(["Home"]), (req, res) =>
   permissao_controller.pegaTodosPermissao_Controller(req, res)
 );
 

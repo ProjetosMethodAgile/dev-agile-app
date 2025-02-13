@@ -22,6 +22,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "permissao_id",
         as: "user_permissions_access",
       });
+
+      // Cada tela (permissao) pode ter várias ações (AcaoTela)
+      Permissao.hasMany(models.AcaoTela, {
+        foreignKey: "permissao_id",
+        as: "acoes",
+      });
     }
   }
 

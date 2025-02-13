@@ -3,38 +3,38 @@ const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class Usuario extends Model {
     static associate(models) {
-      // Relacionamento com Role (Muitos para Muitos)
+      // Associação com Role (Muitos para Muitos)
       Usuario.belongsToMany(models.Role, {
         through: models.usuarios_roles,
         as: "usuario_roles",
         foreignKey: "usuario_id",
       });
 
-      // Relacionamento com Permissao (Muitos para Muitos)
+      // Associação com Permissao (Muitos para Muitos)
       Usuario.belongsToMany(models.Permissao, {
         through: models.UsuarioPermissao,
         as: "usuario_permissoes",
         foreignKey: "usuario_id",
       });
 
-      // Relacionamento com UserPermissionAccess (Um para Muitos)
+      // Associação com UserPermissionAccess (Um para Muitos)
       Usuario.hasMany(models.UserPermissionAccess, {
         foreignKey: "usuario_id",
         as: "user_permissions_access",
       });
 
-      // Relacionamento com Empresa (Muitos para Muitos)
+      // Associação com Empresas (Muitos para Muitos)
       Usuario.belongsToMany(models.Empresa, {
         through: models.Usuario_Empresa,
         as: "empresas",
         foreignKey: "usuario_id",
       });
 
-      // // Relacionamento com Sessao do Chatbot (Um para Muitos)
-      // Usuario.hasMany(models.ChatbotSessao, {
-      //   foreignKey: "usuario_id",
-      //   as: "sessoes",
-      // });
+      // Associação com UserAcaoTela (Um para Muitos)
+      Usuario.hasMany(models.UserAcaoTela, {
+        foreignKey: "usuario_id",
+        as: "user_acoes_tela",
+      });
     }
   }
 
@@ -51,7 +51,7 @@ module.exports = (sequelize, DataTypes) => {
       tableName: "usuarios",
       defaultScope: {
         attributes: {
-          exclude: ["senha"], // Exclui a senha do escopo padrão para segurança
+          exclude: ["senha"],
         },
       },
     }

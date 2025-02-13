@@ -18,10 +18,12 @@ class Usuario_Controller extends Controller {
   }
 
   async registerUsuario_Controller(req, res) {
-    const { email, permissoesCRUD, empresa_id } = req.body; // Adiciona empresa_id no corpo da requisição
+    // Supondo que o body contenha: email, senha, roles_id, permissoes_id, permissoesCRUD, empresa_id
+    const { email, permissoesCRUD, empresa_id } = req.body;
     const bodyReq = req.body;
 
     try {
+      // Valida os campos obrigatórios (método allowNull personalizado)
       const isTrue = await this.allowNull(req, res);
       if (!isTrue.status) {
         return res.status(500).json({
@@ -42,7 +44,7 @@ class Usuario_Controller extends Controller {
         });
       }
 
-      // Verifica se permissoesCRUD foi passado e se é um array
+      // Valida se permissoesCRUD foi passado e se é um array
       if (!permissoesCRUD || !Array.isArray(permissoesCRUD)) {
         return res.status(400).json({
           message: "Permissões CRUD não fornecidas ou inválidas",
@@ -50,7 +52,7 @@ class Usuario_Controller extends Controller {
         });
       }
 
-      // Verifica se todos os campos necessários para permissoesCRUD estão corretos
+      // Valida os campos obrigatórios dentro de cada objeto de permissoesCRUD
       const invalidPermissoes = permissoesCRUD.some(
         (permissao) =>
           !permissao.permissao_id ||
@@ -59,7 +61,6 @@ class Usuario_Controller extends Controller {
           typeof permissao.can_update === "undefined" ||
           typeof permissao.can_delete === "undefined"
       );
-
       if (invalidPermissoes) {
         return res.status(400).json({
           message:
@@ -68,15 +69,13 @@ class Usuario_Controller extends Controller {
         });
       }
 
-      // Verifica se o empresa_id foi passado
+      // Verifica se o empresa_id foi passado e se a empresa existe
       if (!empresa_id) {
         return res.status(400).json({
           message: "ID da empresa não fornecido",
           error: true,
         });
       }
-
-      // Verifica se a empresa existe
       const empresa = await usuario_services.pegaUsuarioPorId_Services(
         empresa_id
       );
@@ -87,7 +86,7 @@ class Usuario_Controller extends Controller {
         });
       }
 
-      // Gerando senha cripto
+      // Gera a senha criptografada
       const salt = await bcrypt.genSalt(12);
       const senhaHash = await bcrypt.hash(bodyReq.senha, salt);
       bodyReq.senha = senhaHash;
@@ -97,7 +96,6 @@ class Usuario_Controller extends Controller {
         bodyReq,
         permissoesCRUD
       );
-
       if (createUser.status) {
         return res.status(200).json({
           message: `Usuário cadastrado e vinculado à empresa com sucesso`,
@@ -105,22 +103,22 @@ class Usuario_Controller extends Controller {
         });
       } else {
         return res.status(500).json({
-          message: createUser.message || `Erro ao cadastrar o usuário`,
+          message: createUser.message || "Erro ao cadastrar o usuário",
           error: true,
         });
       }
     } catch (e) {
-      console.log(e);
+      console.error(e);
       return res.status(500).json({
-        message: `Erro ao buscar registro, contate o administrador do sistema`,
+        message: "Erro ao buscar registro, contate o administrador do sistema",
         error: true,
       });
     }
   }
 
+  // Login do usuário
   async loginUsuario_Controller(req, res) {
     const { email, senha, empresaId, empresaTag } = req.body;
-
     if (!email)
       return res.status(422).json({ message: "Por favor, insira um email" });
     if (!senha)
@@ -130,18 +128,18 @@ class Usuario_Controller extends Controller {
     if (!empresaTag)
       return res.status(422).json({ message: "Informe a tag da empresa" });
 
-    // Busca o usuário pelo e-mail (já com as empresas associadas, conforme seu serviço)
+    // Busca o usuário pelo e-mail, já com as empresas associadas
     const emailExist = await usuario_services.pegaUsuarioPorEmail_Services(
       email
     );
     if (!emailExist.status) {
-      return res
-        .status(401)
-        .json({ error: true, message: "E-mail ou Senha incorreta" });
+      return res.status(401).json({
+        error: true,
+        message: "E-mail ou Senha incorreta",
+      });
     }
-
     const usuario = emailExist.retorno;
-    // Verifica se o usuário está associado à empresa informada
+    // Verifica se o usuário está vinculado à empresa informada
     if (
       !usuario.empresas ||
       !usuario.empresas.some((empresa) => empresa.id === empresaId)
@@ -151,7 +149,7 @@ class Usuario_Controller extends Controller {
         .json({ error: true, message: "Usuário não encontrado" });
     }
 
-    // Valida a senha e gera o token com o empresaId incluso
+    // Valida a senha e gera o token, incluindo empresaId e empresaTag
     const checkSenha = await usuario_services.validaSenhaUsuario_Services(
       email,
       senha,
@@ -159,11 +157,11 @@ class Usuario_Controller extends Controller {
       empresaTag
     );
     if (!checkSenha.status) {
-      return res
-        .status(401)
-        .json({ error: true, message: "E-mail ou Senha incorreta" });
+      return res.status(401).json({
+        error: true,
+        message: "E-mail ou Senha incorreta",
+      });
     }
-
     return res.status(200).json({
       message: "Autenticação realizada com sucesso",
       token: checkSenha.token,
