@@ -23,6 +23,18 @@ class Permissao_Controller extends Controller {
     }
   }
 
+  async pegaPermissaoEacoesPorUserId_Controller(req, res) {
+    const { id } = req.params;
+    try {
+      const permissoes =
+        await permissao_services.pegaPermissaoEacoesPorUserId_Services(id);
+      return res.status(200).json({ status: true, permissoes });
+    } catch (error) {
+      console.error("Erro em pegaPermissaoEacoesPorUserId_Controller:", error);
+      return res.status(500).json({ status: false, message: error.message });
+    }
+  }
+
   async criaPermissao_Controller(req, res) {
     const isTrue = await this.allowNull(req, res);
     try {

@@ -11,7 +11,7 @@ route.post("/api/permissoes", checkTokenLogin, (req, res) =>
   permissao_controller.criaPermissao_Controller(req, res)
 );
 
-route.get("/api/permissoes", checkTokenLogin, authorize(["Home"]), (req, res) =>
+route.get("/api/permissoes", checkTokenLogin, (req, res) =>
   permissao_controller.pegaTodosPermissao_Controller(req, res)
 );
 
@@ -21,6 +21,11 @@ route.get("/api/permissoes/:id", checkTokenLogin, (req, res) =>
 
 route.delete("/api/permissoes/:id", checkTokenLogin, (req, res) =>
   permissao_controller.deletaPermissaoPorId_Controller(req, res)
+);
+
+//Retorna as permissões (telas) e as ações vinculadas ao usuário especificado
+route.get("/api/permissoes/user/:id", checkTokenLogin, (req, res) =>
+  permissao_controller.pegaPermissaoEacoesPorUserId_Controller(req, res)
 );
 
 module.exports = route;

@@ -31,6 +31,33 @@ class Permissao_Services extends Services {
     return await devAgile[this.nomeModel].findAll();
   }
 
+  // NOVO: Busca permissões (telas) e ações vinculadas para um usuário específico
+  async pegaPermissaoEacoesPorUserId_Services(userId) {
+    return await devAgile.Permissao.findAll({
+      include: [
+        {
+          model: devAgile.UserPermissionAccess,
+          as: "user_permissions_access",
+          where: { usuario_id: userId },
+          required: false,
+          attributes: ["can_create", "can_read", "can_update", "can_delete"],
+        },
+        {
+          model: devAgile.AcaoTela,
+          as: "acoes",
+          include: [
+            {
+              model: devAgile.UserAcaoTela,
+              as: "user_acoes",
+              where: { usuario_id: userId },
+              required: false,
+            },
+          ],
+        },
+      ],
+    });
+  }
+
   async pegaPermissaoPorId_Services(id) {
     return devAgile[this.nomeModel].findByPk(id);
   }
