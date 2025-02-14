@@ -142,8 +142,16 @@ class Usuario_Controller extends Controller {
     // Verifica se o usuário está vinculado à empresa informada
     if (
       !usuario.empresas ||
-      !usuario.empresas.some((empresa) => empresa.id === empresaId)
+      !usuario.empresas.some(
+        (empresa) => String(empresa.id) === String(empresaId)
+      )
     ) {
+      console.log(
+        "Usuário empresas:",
+        usuario.empresas,
+        "EmpresaId:",
+        empresaId
+      );
       return res
         .status(401)
         .json({ error: true, message: "Usuário não encontrado" });

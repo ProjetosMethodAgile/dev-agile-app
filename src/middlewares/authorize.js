@@ -1,5 +1,13 @@
 const { devAgile } = require("../models");
-const { Usuario, Role, Permissao, UserPermissionAccess, Empresa } = devAgile;
+const {
+  Usuario,
+  Role,
+  Permissao,
+  UserPermissionAccess,
+  Empresa,
+  UserAcaoTela,
+  AcaoTela,
+} = devAgile;
 
 const methodActionMap = {
   GET: "can_read",
@@ -11,10 +19,12 @@ const methodActionMap = {
 /**
  * Middleware de autorização.
  *
- * @param {string | string[]} requiredPermissions - Permissão ou array de permissões necessárias (ex.: "home_drag" ou ["home_drag", "home_post"]).
+ * @param {string | string[]} requiredPermissions - Permissão ou array de permissões necessárias (para UserPermissionAccess e roles)
+ * @param {object} [options] - Opções adicionais
+ * @param {string | string[]} [options.requiredAcao] - Ação unitária requerida (para UserAcaoTela). Pode ser o nome ou o ID da ação.
  */
-function authorize(requiredPermissions) {
-  // Permite que seja passado um único valor ou um array
+function authorize(requiredPermissions, options = {}) {
+  // Se não for array, transforma em array
   if (!Array.isArray(requiredPermissions)) {
     requiredPermissions = [requiredPermissions];
   }
@@ -24,7 +34,7 @@ function authorize(requiredPermissions) {
       const userId = req.user.id;
       const action = methodActionMap[req.method] || "can_read";
 
-      // Carrega o usuário com as associações necessárias
+      // Carrega o usuário com as associações necessárias, incluindo UserAcaoTela
       const user = await Usuario.findByPk(userId, {
         include: [
           {
@@ -38,6 +48,17 @@ function authorize(requiredPermissions) {
             include: [{ model: Permissao, as: "permissao" }],
           },
           { model: Empresa, as: "empresas" },
+          {
+            model: UserAcaoTela,
+            as: "user_acoes_tela",
+            include: [
+              {
+                model: AcaoTela,
+                as: "acao_tela",
+                attributes: ["id", "nome"],
+              },
+            ],
+          },
         ],
       });
 
@@ -45,7 +66,7 @@ function authorize(requiredPermissions) {
         return res.status(401).json({ error: "Usuário não encontrado." });
       }
 
-      // Verifica se o usuário possui ao menos uma das permissões explicitamente configuradas
+      // 1. Verifica se o usuário possui uma permissão explícita (via UserPermissionAccess)
       let hasExplicitPermission = false;
       for (const requiredPermission of requiredPermissions) {
         if (
@@ -65,14 +86,13 @@ function authorize(requiredPermissions) {
         }
         if (hasExplicitPermission) break;
       }
-
       if (!hasExplicitPermission) {
         return res
           .status(403)
           .json({ error: "Acesso negado. Permissão explícita insuficiente." });
       }
 
-      // Validação do role: verifica se o usuário possui um role que inclui a(s) permissão(ões)
+      // 2. Verifica se pelo menos um dos roles do usuário concede a permissão requerida
       let roleAllowsPermission = false;
       for (const requiredPermission of requiredPermissions) {
         if (user.usuario_roles && user.usuario_roles.length > 0) {
@@ -87,36 +107,62 @@ function authorize(requiredPermissions) {
         }
         if (roleAllowsPermission) break;
       }
-
       if (!roleAllowsPermission) {
-        return res.status(403).json({
-          error: "Acesso negado. Papel do usuário não permite essa permissão.",
-        });
+        return res
+          .status(403)
+          .json({
+            error:
+              "Acesso negado. Papel do usuário não permite essa permissão.",
+          });
       }
 
-      // Validação de Empresa (exceto para usuários master)
+      // 3. Se for necessário verificar ações unitárias (UserAcaoTela)
+      if (options.requiredAcao) {
+        let requiredAcoes = options.requiredAcao;
+        if (!Array.isArray(requiredAcoes)) {
+          requiredAcoes = [requiredAcoes];
+        }
+        const hasAcao =
+          user.user_acoes_tela &&
+          user.user_acoes_tela.some(
+            (ua) =>
+              ua.acao_tela &&
+              (requiredAcoes.includes(ua.acao_tela.nome) ||
+                requiredAcoes.includes(ua.acao_tela.id))
+          );
+        if (!hasAcao) {
+          return res
+            .status(403)
+            .json({ error: "Acesso negado. Ação unitária não permitida." });
+        }
+      }
+
+      // 4. Validação de Empresa (exceto para usuários master)
       const masterRoleId = process.env.MASTER_ROLE_ID;
       const isMaster =
         user.usuario_roles &&
         user.usuario_roles.some((role) => role.id === masterRoleId);
-
       if (!isMaster && req.user.empresa) {
         const providedEmpresaId = req.params.empresaId || req.body.empresaId;
         if (providedEmpresaId && providedEmpresaId !== req.user.empresa.id) {
-          return res.status(403).json({
-            error:
-              "Acesso negado. Empresa informada difere da empresa do token.",
-          });
+          return res
+            .status(403)
+            .json({
+              error:
+                "Acesso negado. Empresa informada difere da empresa do token.",
+            });
         }
         if (user.empresas && user.empresas.length > 0) {
           const companyFound = user.empresas.find(
             (e) => e.id === req.user.empresa.id
           );
           if (!companyFound) {
-            return res.status(403).json({
-              error:
-                "Acesso negado. Empresa do token não associada ao usuário.",
-            });
+            return res
+              .status(403)
+              .json({
+                error:
+                  "Acesso negado. Empresa do token não associada ao usuário.",
+              });
           }
         }
       }

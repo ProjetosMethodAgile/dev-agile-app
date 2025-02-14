@@ -49,6 +49,18 @@ class Usuario_Services extends Services {
               },
             ],
           },
+
+          {
+            model: devAgile.UserAcaoTela,
+            as: "user_acoes_tela",
+            include: [
+              {
+                model: devAgile.AcaoTela,
+                as: "acao_tela",
+                attributes: ["id", "nome", "descricao"],
+              },
+            ],
+          },
         ],
       });
 
@@ -56,19 +68,17 @@ class Usuario_Services extends Services {
         return { status: false, usuarios: [] };
       }
 
-      // Formata cada usuário com as permissões agrupadas por tela
+      // Formata cada usuário
       const formattedUsuarios = usuarios.map((usuario) => {
         const permissoesPorTela = usuario.usuario_permissoes.reduce(
           (acc, permissao) => {
             const telaNome = permissao.nome;
-
             if (!acc[telaNome]) {
               acc[telaNome] = {
                 tela: telaNome,
                 permissoes: [],
               };
             }
-
             const crudPermissions = permissao.user_permissions_access[0];
             acc[telaNome].permissoes.push({
               permissao_id: permissao.id,
@@ -77,10 +87,14 @@ class Usuario_Services extends Services {
               can_update: crudPermissions?.can_update || false,
               can_delete: crudPermissions?.can_delete || false,
             });
-
             return acc;
           },
           {}
+        );
+
+        // Extrai as ações unitárias (por exemplo, apenas os IDs)
+        const acoesTela = usuario.user_acoes_tela.map(
+          (registro) => registro.acao_tela.id
         );
 
         return {
@@ -91,6 +105,7 @@ class Usuario_Services extends Services {
           empresa: usuario.empresas,
           usuario_roles: usuario.usuario_roles,
           usuario_permissoes_por_tela: Object.values(permissoesPorTela),
+          acoesTela, // Retorna os IDs das ações unitárias vinculadas
           createdAt: usuario.createdAt,
           updatedAt: usuario.updatedAt,
         };
@@ -102,6 +117,7 @@ class Usuario_Services extends Services {
       throw new Error("Erro ao buscar usuários");
     }
   }
+
   async cadastraUsuario_Services(bodyReq, permissoesCRUD) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
@@ -237,15 +253,52 @@ class Usuario_Services extends Services {
           ],
           through: { attributes: [] },
         },
+        {
+          model: devAgile.Role,
+          as: "usuario_roles",
+          attributes: ["id", "nome", "descricao"],
+          through: { attributes: [] },
+        },
+        {
+          model: devAgile.Permissao,
+          as: "usuario_permissoes",
+          attributes: ["id", "nome", "descricao"],
+          through: { attributes: [] },
+          include: [
+            {
+              model: devAgile.UserPermissionAccess,
+              as: "user_permissions_access",
+              attributes: [
+                "can_create",
+                "can_read",
+                "can_update",
+                "can_delete",
+              ],
+            },
+          ],
+        },
+        {
+          model: devAgile.UserAcaoTela,
+          as: "user_acoes_tela",
+          include: [
+            {
+              model: devAgile.AcaoTela,
+              as: "acao_tela",
+              attributes: ["id", "nome", "descricao"],
+            },
+          ],
+        },
       ],
     });
 
-    if (retorno === null) {
+    if (!retorno) {
       console.log("Email não encontrado na base de dados");
       return { status: false, retorno: null };
     } else {
-      console.log("Email foi encontrado na base de dados");
-      return { status: true, retorno: retorno };
+      // Converte a instância para um objeto plain
+      const user = retorno.get({ plain: true });
+      console.log("Email foi encontrado na base de dados", user);
+      return { status: true, retorno: user };
     }
   }
 
@@ -271,7 +324,7 @@ class Usuario_Services extends Services {
           model: devAgile.Role,
           as: "usuario_roles",
           attributes: ["id", "nome", "descricao"],
-          through: { attributes: [] }, // Exclui os atributos da tabela de junção
+          through: { attributes: [] },
         },
         {
           model: devAgile.Permissao,
@@ -288,7 +341,18 @@ class Usuario_Services extends Services {
                 "can_update",
                 "can_delete",
               ],
-              where: { usuario_id: id }, // Filtra para o usuário específico
+              where: { usuario_id: id },
+            },
+          ],
+        },
+        {
+          model: devAgile.UserAcaoTela,
+          as: "user_acoes_tela",
+          include: [
+            {
+              model: devAgile.AcaoTela,
+              as: "acao_tela",
+              attributes: ["id", "nome", "descricao"],
             },
           ],
         },
@@ -302,17 +366,14 @@ class Usuario_Services extends Services {
     // Agrupa as permissões por tela usando UserPermissionAccess
     const permissoesPorTela = usuario.usuario_permissoes.reduce(
       (acc, permissao) => {
-        const telaNome = permissao.nome; // Usando o nome da permissão como representação da tela
-
+        const telaNome = permissao.nome;
         if (!acc[telaNome]) {
           acc[telaNome] = {
             tela: telaNome,
             permissoes: [],
           };
         }
-
-        // Extraindo permissões CRUD de `user_permissions_access`
-        const crudPermissions = permissao.user_permissions_access[0]; // Obtém a entrada CRUD específica
+        const crudPermissions = permissao.user_permissions_access[0];
         acc[telaNome].permissoes.push({
           permissao_id: permissao.id,
           can_create: crudPermissions?.can_create || false,
@@ -320,13 +381,17 @@ class Usuario_Services extends Services {
           can_update: crudPermissions?.can_update || false,
           can_delete: crudPermissions?.can_delete || false,
         });
-
         return acc;
       },
       {}
     );
 
-    // Organiza a resposta final com o usuário e permissões agrupadas por tela
+    // Formata o array de ações unitárias, extraindo por exemplo apenas os IDs da ação
+    const acoesTela = usuario.user_acoes_tela.map(
+      (registro) => registro.acao_tela.id
+    );
+
+    // Organiza a resposta final
     return {
       status: true,
       usuario: {
@@ -337,6 +402,7 @@ class Usuario_Services extends Services {
         empresa: usuario.empresas,
         usuario_roles: usuario.usuario_roles,
         usuario_permissoes_por_tela: Object.values(permissoesPorTela),
+        acoesTela, // Retorna os IDs das ações unitárias vinculadas
         createdAt: usuario.createdAt,
         updatedAt: usuario.updatedAt,
       },
