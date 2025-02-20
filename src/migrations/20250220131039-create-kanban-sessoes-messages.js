@@ -2,21 +2,26 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("kanban_setores", {
+    await queryInterface.createTable("kanban_sessoes_messages", {
       id: {
         allowNull: false,
         primaryKey: true,
         type: Sequelize.UUID,
       },
-      empresa_id: {
+      sessao_id: {
         type: Sequelize.UUID,
-        references: {
-          model: "empresas",
-          key: "id",
-        },
-        onDelete: "CASCADE",
+        references: { model: "kanban_sessoes", key: "id" },
       },
-      nome: {
+      atendente_id: {
+        type: Sequelize.UUID,
+        references: { model: "kanban_atendente_helpdesks", key: "id" },
+      },
+      cliente_id: {
+        type: Sequelize.UUID,
+        references: { model: "usuarios", key: "id" },
+        allowNull: true,
+      },
+      content_msg: {
         type: Sequelize.STRING,
       },
       createdAt: {
@@ -30,6 +35,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("kanban_setores");
+    await queryInterface.dropTable("kanban_sessoes_messages");
   },
 };

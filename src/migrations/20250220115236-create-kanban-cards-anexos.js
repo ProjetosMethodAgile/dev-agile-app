@@ -2,21 +2,20 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("kanban_setores", {
+    await queryInterface.createTable("kanban_cards_anexos", {
       id: {
         allowNull: false,
         primaryKey: true,
         type: Sequelize.UUID,
       },
-      empresa_id: {
+      card_id: {
         type: Sequelize.UUID,
-        references: {
-          model: "empresas",
-          key: "id",
-        },
-        onDelete: "CASCADE",
+        references: { model: "kanban_cards", key: "id" },
       },
-      nome: {
+      src_anexo: {
+        type: Sequelize.STRING,
+      },
+      tipo: {
         type: Sequelize.STRING,
       },
       createdAt: {
@@ -30,6 +29,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("kanban_setores");
+    await queryInterface.dropTable("kanban_cards_anexos");
   },
 };

@@ -7,6 +7,16 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "empresa_id",
         as: "EmpresaSetorKanban",
       });
+
+      KanbanSetores.hasMany(models.KanbanMotivos, {
+        foreignKey: "setor_id",
+        as: "MotivosSetores",
+      });
+
+      KanbanSetores.hasMany(models.KanbanComlumns, {
+        foreignKey: "setor_id",
+        as: "SetorColumns",
+      });
     }
   }
   KanbanSetores.init(
@@ -17,6 +27,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "KanbanSetores",
+      tableName: "kanban_setores",
     }
   );
   return KanbanSetores;
