@@ -35,6 +35,16 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "usuario_id",
         as: "user_acoes_tela",
       });
+
+      Usuario.hasOne(models.KanbanAtendenteHelpDesk, {
+        foreignKey: "usuario_id",
+        as: "AtendenteUsuario",
+      });
+
+      Usuario.hasMany(models.KanbanSessoesMessages, {
+        foreignKey: "cliente_id",
+        as: "ClienteMessage",
+      });
     }
   }
 
