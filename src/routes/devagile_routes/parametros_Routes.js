@@ -1,10 +1,11 @@
 const { Router } = require("express");
-const Parametros_Controller = require("../../controller/devagile_controller/Parametros_Controller");
-const route = Router()
-const parametros_Controller = new Parametros_Controller();
+const ParametrosController = require("../../controller/devagile_controller/Parametros_Controller");
 
-route.get("/api/parametros")
+const route = Router();
+const parametrosController = new ParametrosController();
 
+route.get("/api/parametros", (req, res) =>
+  parametrosController.pegaTodosParametros_controller(req, res)
+);
 
-module.exports = route
-
+module.exports = route;
