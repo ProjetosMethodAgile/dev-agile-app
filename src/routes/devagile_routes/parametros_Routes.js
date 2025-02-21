@@ -10,5 +10,11 @@ route.get("/api/parametros", (req, res) =>
 route.post("/api/parametros", (req, res) =>
   parametrosController.criaParametros_controller(req, res)
 );
+route.delete("/api/parametros", (req, res) =>
+  parametrosController.deletaParametrosporID_controller(req, res)
+);
+route.put("/api/parametros", (req, res) =>
+  parametrosController.atualizaParametroPorNome(req, res)
+);
 
 module.exports = route;

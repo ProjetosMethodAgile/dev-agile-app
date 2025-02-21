@@ -6,6 +6,7 @@ const parametros_services = new Parametros_Services();
 const  empresa_services = new Empresa_Services();
 const permissao_services = new Permissao_Services();
 const camposObrigatorios = ["nome", "empresa_id", "descricao","tipo_id"];
+
 class Parametros_Controller extends Controller{
     constructor() {
         super(parametros_services, camposObrigatorios);
@@ -55,7 +56,49 @@ async criaParametros_controller(req, res) {
         });
     }
 }
-
+async deletaParametrosporID_controller(req,res){
+    const {id} = req.body
+    try{
+        const parametroDeletado = await parametros_services.deletaParametro(id);
+        return res.status(200).json(parametroDeletado);
+    }catch(e){
+        console.log(e);
+        return res.status(500).json({
+            message: "Erro ao buscar parametro, contate o administrador do sistema",
+        });
+        
+    }
+    
+}
+async atualizaParametroPorNome(req,res){
+    const {nome,descricao,tipo_id,id} = req.body;
+    const idExistente = parametros_services.pegaIdParametro(id)
+    
+   
+    try {
+      const parametrosAtualizado =
+        await parametros_services.atualizaParametros_Services(id, {
+          nome,
+          descricao,
+          tipo_id
+        });
+      if (!parametrosAtualizado) {
+        return res
+          .status(404)
+          .json({ message: `Parametro não encontrada` });
+      }
+      return res.status(200).json({
+        message: `Parametro atualizada com sucesso`,
+        parametrosAtualizado,
+      });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({
+        message:
+          "Erro ao atualizar empresa, contate o administrador do sistema",
+      });
+    }
+}
 }
 
 module.exports = Parametros_Controller
