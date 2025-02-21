@@ -1,7 +1,6 @@
 const Services = require("../Services");
-const { devAgile } = require("../../models");
 const uuid = require("uuid");
-const { where } = require("sequelize");
+const { devAgile, sequelizeDevAgileCli } = require("../../models/index.js");
 
 
 class Parametros_Services extends Services {
@@ -13,29 +12,51 @@ class Parametros_Services extends Services {
     return await devAgile[this.nomeModel].findAll();
   }
   async criaParametros_Services(nome, empresa_id, descricao, tipo_id) {
+    const transaction = await sequelizeDevAgileCli.transaction();
 
-    const parametroExiste = await devAgile[this.nomeModel].findOne({
-      where: {
-        name: nome,
-      },
-    });
-    if (parametroExiste !== null) {
-      return { error: true, parametro: parametroExiste, message: "Parametro já existe" };
-    } else {
-      const novoParametro = await devAgile[this.nomeModel].create({
-        id: uuid.v4(),
-        name: nome,
-        empresa_id: empresa_id,
-        descricao: descricao,
-        tipo_id: tipo_id
-      })
-      return { error: false, parametro: novoParametro, message: "Parametro cadastrado co sucesso" };
+    try {
+      // Correção: Passa o objeto de transação separadamente
+      const parametroExiste = await devAgile[this.nomeModel].findOne({
+        where: { name: nome },
+        transaction,
+      });
+
+      if (parametroExiste !== null) {
+        await transaction.rollback();
+        return { error: true, parametro: parametroExiste, message: "Parâmetro já existe" };
+      }
+
+      const novoParametro = await devAgile[this.nomeModel].create(
+        {
+          id: uuid.v4(),
+          name: nome,
+          empresa_id,
+          descricao,
+          tipo_id,
+        },
+        { transaction }
+      );
+
+      await novoParametro.addEmpresaParametros(empresa_id, { transaction });
+
+      await transaction.commit();
+
+      return { error: false, parametro: novoParametro, message: "Parâmetro cadastrado com sucesso" };
+    } catch (error) {
+      await transaction.rollback();
+      console.error("Erro ao criar parâmetro:", error);
+      return { error: true, message: "Erro ao cadastrar parâmetro" };
     }
   }
+
+
+
+
   async deletaParametro(id) {
     const parametroExiste = await devAgile[this.nomeModel].findOne({
       where: {
         id: id,
+     
       },
     });
 
@@ -45,6 +66,7 @@ class Parametros_Services extends Services {
     const deletaParametro = await devAgile[this.nomeModel].destroy({
       where: {
         id: id,
+        
       }
 
     })

@@ -73,8 +73,12 @@ async deletaParametrosporID_controller(req,res){
 async atualizaParametroPorNome(req,res){
     const {nome,descricao,tipo_id,id} = req.body;
     const idExistente = parametros_services.pegaIdParametro(id)
-    
-   
+    if (!idExistente || idExistente == null) {
+        return res.status(500).json({
+            message:
+              "Erro ao atualizar parametro, contate o administrador do sistema",
+          });
+    }
     try {
       const parametrosAtualizado =
         await parametros_services.atualizaParametros_Services(id, {
