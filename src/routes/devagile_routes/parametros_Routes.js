@@ -7,6 +7,12 @@ const parametrosController = new ParametrosController();
 route.get("/api/parametros", (req, res) =>
   parametrosController.pegaTodosParametros_controller(req, res)
 );
+route.get("/api/parametros/verifica", (req, res) =>
+  parametrosController.pegaParametrosEmpresa_controller(req, res)
+);
+
+
+
 route.post("/api/parametros", (req, res) =>
   parametrosController.criaParametros_controller(req, res)
 );

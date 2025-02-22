@@ -11,6 +11,12 @@ class Parametros_Services extends Services {
   async pegaTodosParametros_Services() {
     return await devAgile[this.nomeModel].findAll();
   }
+
+  async pegaParametrosEmpresa_Services(id){
+    return await devAgile.EmpresaParametro.findOne(
+      {where:{id:id}}
+    )
+  }
   async criaParametros_Services(nome, empresa_id, descricao, tipo_id) {
     const transaction = await sequelizeDevAgileCli.transaction();
 
@@ -52,7 +58,7 @@ class Parametros_Services extends Services {
 
 
 
-  async deletaParametro(id) {
+  async deletaParametro_Services(id) {
     const parametroExiste = await devAgile[this.nomeModel].findOne({
       where: {
         id: id,
@@ -88,7 +94,7 @@ class Parametros_Services extends Services {
   }
 
 
-async pegaIdParametro(id){
+async pegaIdParametro_Services(id){
   const parametroExiste = await devAgile[this.nomeModel].findOne({
     where: {
       id: id,

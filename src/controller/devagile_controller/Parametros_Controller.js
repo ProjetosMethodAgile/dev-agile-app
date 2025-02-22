@@ -24,6 +24,21 @@ class Parametros_Controller extends Controller{
  
     }
 }
+ async pegaParametrosEmpresa_controller(req,res){
+
+    const {id}= req.body
+
+    try{
+        const listaParametros = await parametros_services.pegaParametrosEmpresa_Services(id);
+        return res.status(200).json(listaParametros);
+    }catch(e){
+        console.log(e);
+        return res.status(500).json({
+            message: "Erro ao buscar empresas, contate o administrador do sistema",
+        });
+ 
+    }
+}
 
 async criaParametros_controller(req, res) {
     const isTrue = await this.allowNull(req, res);
@@ -59,7 +74,7 @@ async criaParametros_controller(req, res) {
 async deletaParametrosporID_controller(req,res){
     const {id} = req.body
     try{
-        const parametroDeletado = await parametros_services.deletaParametro(id);
+        const parametroDeletado = await parametros_services.deletaParametro_Services(id);
         return res.status(200).json(parametroDeletado);
     }catch(e){
         console.log(e);
@@ -72,7 +87,7 @@ async deletaParametrosporID_controller(req,res){
 }
 async atualizaParametroPorNome(req,res){
     const {nome,descricao,tipo_id,id} = req.body;
-    const idExistente = parametros_services.pegaIdParametro(id)
+    const idExistente = parametros_services.pegaIdParametro_Services(id)
     if (!idExistente || idExistente == null) {
         return res.status(500).json({
             message:
