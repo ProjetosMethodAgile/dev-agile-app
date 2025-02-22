@@ -26,8 +26,9 @@ class Parametros_Controller extends Controller{
 }
  async pegaParametrosEmpresa_controller(req,res){
 
-    const {id}= req.body
-
+    const { id } = req.body;
+    console.log(id);
+    
     try{
         const listaParametros = await parametros_services.pegaParametrosEmpresa_Services(id);
         return res.status(200).json(listaParametros);
@@ -39,6 +40,7 @@ class Parametros_Controller extends Controller{
  
     }
 }
+
 
 async criaParametros_controller(req, res) {
     const isTrue = await this.allowNull(req, res);

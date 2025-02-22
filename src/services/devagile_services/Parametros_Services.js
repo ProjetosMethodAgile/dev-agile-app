@@ -17,6 +17,8 @@ class Parametros_Services extends Services {
       {where:{empresa_id:id}}
     )
   }
+
+  
   async criaParametros_Services(nome, empresa_id, descricao, tipo_id) {
     const transaction = await sequelizeDevAgileCli.transaction();
 

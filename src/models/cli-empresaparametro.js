@@ -8,12 +8,15 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "empresa_id",
         as: "empresas",
       });
+
+      // Relacionamento com Parametro
       EmpresaParametro.belongsTo(models.Parametros, {
         foreignKey: "parametro_id",
         as: "parametro",
       });
     }
   }
+
 
   EmpresaParametro.init(
     {
