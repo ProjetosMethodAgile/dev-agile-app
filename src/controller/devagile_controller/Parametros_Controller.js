@@ -25,13 +25,15 @@ class Parametros_Controller extends Controller{
     }
 }
  async pegaParametrosEmpresa_controller(req,res){
-
-    const { id } = req.body;
+    const { id } = req.params;
     console.log(id);
     
     try{
         const listaParametros = await parametros_services.pegaParametrosEmpresa_Services(id);
-        return res.status(200).json(listaParametros);
+       if (listaParametros !== null) {
+           return res.status(200).json(listaParametros);
+        }
+        return res.status(202).json(listaParametros);
     }catch(e){
         console.log(e);
         return res.status(500).json({
