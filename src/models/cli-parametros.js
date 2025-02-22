@@ -8,11 +8,16 @@ module.exports = (sequelize, DataTypes) => {
         as: "empresaParametros",
         foreignKey: "parametro_id",
       });
+      Parametros.belongsTo(models.Permissao,{
+        foreignKey:"tipo_id",
+        as:"tela_parametros"
+      })
     }
   }
   Parametros.init(
     {
       name: DataTypes.STRING,
+      descricao: DataTypes.TEXT
     },
     {
       sequelize,

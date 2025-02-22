@@ -28,6 +28,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "permissao_id",
         as: "acoes",
       });
+      Permissao.hasMany(models.Parametros,{
+        foreignKey:"tipo_id",
+        as: "parametros_tela"
+      })
+
     }
   }
 

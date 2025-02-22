@@ -15,6 +15,11 @@ module.exports = (sequelize, DataTypes) => {
         as: "parametrosEmpresa",
         foreignKey: "empresa_id",
       });
+      Empresa.belongsToMany(models.Parametros, {
+        through: models.EmpresaParametro, 
+        as: "parametros",                
+        foreignKey: "empresa_id"         
+      });
       Empresa.hasMany(models.KanbanSetores, {
         foreignKey: "empresa_id",
         as: "SetorEmpresaKanban",
