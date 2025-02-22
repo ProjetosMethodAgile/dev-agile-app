@@ -14,7 +14,7 @@ class Parametros_Services extends Services {
 
   async pegaParametrosEmpresa_Services(id){
     return await devAgile.EmpresaParametro.findOne(
-      {where:{id:id}}
+      {where:{empresa_id:id}}
     )
   }
   async criaParametros_Services(nome, empresa_id, descricao, tipo_id) {
