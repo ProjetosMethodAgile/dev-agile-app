@@ -17,14 +17,13 @@ const methodActionMap = {
 };
 
 /**
- * Middleware de autorização.
+ * Middleware de autorização com suporte a permissões hierárquicas.
  *
  * @param {string | string[]} requiredPermissions - Permissão ou array de permissões necessárias (para UserPermissionAccess e roles)
  * @param {object} [options] - Opções adicionais
  * @param {string | string[]} [options.requiredAcao] - Ação unitária requerida (para UserAcaoTela). Pode ser o nome ou o ID da ação.
  */
 function authorize(requiredPermissions, options = {}) {
-  // Se não for array, transforma em array
   if (!Array.isArray(requiredPermissions)) {
     requiredPermissions = [requiredPermissions];
   }
@@ -34,7 +33,7 @@ function authorize(requiredPermissions, options = {}) {
       const userId = req.user.id;
       const action = methodActionMap[req.method] || "can_read";
 
-      // Carrega o usuário com as associações necessárias, incluindo UserAcaoTela
+      // Carrega o usuário com as associações necessárias
       const user = await Usuario.findByPk(userId, {
         include: [
           {
@@ -45,7 +44,13 @@ function authorize(requiredPermissions, options = {}) {
           {
             model: UserPermissionAccess,
             as: "user_permissions_access",
-            include: [{ model: Permissao, as: "permissao" }],
+            include: [
+              {
+                model: Permissao,
+                as: "permissao",
+                include: [{ model: Permissao, as: "parent" }], // Inclui o parent_id (hierarquia)
+              },
+            ],
           },
           { model: Empresa, as: "empresas" },
           {
@@ -66,17 +71,15 @@ function authorize(requiredPermissions, options = {}) {
         return res.status(401).json({ error: "Usuário não encontrado." });
       }
 
-      // 1. Verifica se o usuário possui uma permissão explícita (via UserPermissionAccess)
+      // 1️⃣ Verifica permissões diretas do usuário (UserPermissionAccess)
       let hasExplicitPermission = false;
       for (const requiredPermission of requiredPermissions) {
-        if (
-          user.user_permissions_access &&
-          user.user_permissions_access.length > 0
-        ) {
+        if (user.user_permissions_access?.length > 0) {
           for (const access of user.user_permissions_access) {
             if (
               access.permissao &&
-              access.permissao.nome === requiredPermission &&
+              (access.permissao.nome === requiredPermission || // Permissão direta
+                access.permissao.parent?.nome === requiredPermission) && // Permissão herdada
               access[action]
             ) {
               hasExplicitPermission = true;
@@ -86,19 +89,26 @@ function authorize(requiredPermissions, options = {}) {
         }
         if (hasExplicitPermission) break;
       }
+
       if (!hasExplicitPermission) {
-        return res
-          .status(403)
-          .json({ error: "Acesso negado. Permissão explícita insuficiente." });
+        return res.status(403).json({
+          error: "Acesso negado. Permissão explícita insuficiente.",
+        });
       }
 
-      // 2. Verifica se pelo menos um dos roles do usuário concede a permissão requerida
+      // 2️⃣ Verifica permissões concedidas pelas roles do usuário
       let roleAllowsPermission = false;
       for (const requiredPermission of requiredPermissions) {
-        if (user.usuario_roles && user.usuario_roles.length > 0) {
+        if (user.usuario_roles?.length > 0) {
           for (const role of user.usuario_roles) {
-            if (role.permissoes && role.permissoes.length > 0) {
-              if (role.permissoes.find((p) => p.nome === requiredPermission)) {
+            if (role.permissoes?.length > 0) {
+              if (
+                role.permissoes.find(
+                  (p) =>
+                    p.nome === requiredPermission ||
+                    p.parent_id?.nome === requiredPermission
+                )
+              ) {
                 roleAllowsPermission = true;
                 break;
               }
@@ -107,16 +117,14 @@ function authorize(requiredPermissions, options = {}) {
         }
         if (roleAllowsPermission) break;
       }
+
       if (!roleAllowsPermission) {
-        return res
-          .status(403)
-          .json({
-            error:
-              "Acesso negado. Papel do usuário não permite essa permissão.",
-          });
+        return res.status(403).json({
+          error: "Acesso negado. Papel do usuário não permite essa permissão.",
+        });
       }
 
-      // 3. Se for necessário verificar ações unitárias (UserAcaoTela)
+      // 3️⃣ Se necessário, verifica ações unitárias (UserAcaoTela)
       if (options.requiredAcao) {
         let requiredAcoes = options.requiredAcao;
         if (!Array.isArray(requiredAcoes)) {
@@ -137,32 +145,29 @@ function authorize(requiredPermissions, options = {}) {
         }
       }
 
-      // 4. Validação de Empresa (exceto para usuários master)
+      // 4️⃣ Validação de Empresa (exceto para usuários master)
       const masterRoleId = process.env.MASTER_ROLE_ID;
       const isMaster =
         user.usuario_roles &&
         user.usuario_roles.some((role) => role.id === masterRoleId);
+
       if (!isMaster && req.user.empresa) {
         const providedEmpresaId = req.params.empresaId || req.body.empresaId;
         if (providedEmpresaId && providedEmpresaId !== req.user.empresa.id) {
-          return res
-            .status(403)
-            .json({
-              error:
-                "Acesso negado. Empresa informada difere da empresa do token.",
-            });
+          return res.status(403).json({
+            error:
+              "Acesso negado. Empresa informada difere da empresa do token.",
+          });
         }
-        if (user.empresas && user.empresas.length > 0) {
+        if (user.empresas?.length > 0) {
           const companyFound = user.empresas.find(
             (e) => e.id === req.user.empresa.id
           );
           if (!companyFound) {
-            return res
-              .status(403)
-              .json({
-                error:
-                  "Acesso negado. Empresa do token não associada ao usuário.",
-              });
+            return res.status(403).json({
+              error:
+                "Acesso negado. Empresa do token não associada ao usuário.",
+            });
           }
         }
       }

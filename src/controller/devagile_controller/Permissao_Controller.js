@@ -1,9 +1,13 @@
 const { devAgile } = require("../../models/index.js");
 const Permissao_Services = require("../../services/devagile_services/Permissao_Services.js");
+const Tipo_Permissao_Services = require("../../services/devagile_services/TipoPermissao_Services.js");
+const Role_Services = require("../../services/devagile_services/Role_Services.js");
 const Controller = require("../Controller.js");
 
 const permissao_services = new Permissao_Services();
-const camposObrigatorios = ["nome", "descricao"];
+const tipo_permissao_services = new Tipo_Permissao_Services();
+const role_services = new Role_Services();
+const camposObrigatorios = ["nome", "descricao", "tipo_permissao_id"];
 
 class Permissao_Controller extends Controller {
   constructor() {
@@ -38,9 +42,10 @@ class Permissao_Controller extends Controller {
   async criaPermissao_Controller(req, res) {
     const isTrue = await this.allowNull(req, res);
     try {
-      // Verifique se o roleId foi fornecido e se é um array
-      const { nome, descricao, roleIds } = req.body;
+      const { nome, descricao, roleIds, parent_id, tipo_permissao_id } =
+        req.body;
 
+      // Validação de roleIds
       if (!roleIds || !Array.isArray(roleIds) || roleIds.length === 0) {
         return res.status(400).json({
           message:
@@ -48,12 +53,8 @@ class Permissao_Controller extends Controller {
         });
       }
 
-      // Busca todas as roles baseadas no array de roleIds
-      const roles = await devAgile.Role.findAll({
-        where: {
-          id: roleIds,
-        },
-      });
+      // Busca todas as roles informadas
+      const roles = await devAgile.Role.findAll({ where: { id: roleIds } });
 
       if (roles.length === 0) {
         return res
@@ -61,10 +62,40 @@ class Permissao_Controller extends Controller {
           .json({ message: "Nenhuma Role encontrada com os IDs fornecidos" });
       }
 
+      // Validação do parent_id (se informado)
+      let parentPermissao = null;
+      if (parent_id) {
+        parentPermissao = await devAgile.Permissao.findByPk(parent_id);
+        if (!parentPermissao) {
+          return res
+            .status(404)
+            .json({ message: "Permissão pai não encontrada" });
+        }
+      }
+
+      // Validação do tipo_permissao_id (se informado)
+      let tipoPermissao = null;
+      if (tipo_permissao_id) {
+        tipoPermissao = await devAgile.TipoPermissao.findByPk(
+          tipo_permissao_id
+        );
+        if (!tipoPermissao) {
+          return res
+            .status(404)
+            .json({ message: "Tipo de Permissão não encontrado" });
+        }
+      }
+
       if (isTrue.status) {
         const permissaoResult = await permissao_services.criaPermissao_Services(
-          { nome, descricao }
+          {
+            nome,
+            descricao,
+            parent_id,
+            tipo_permissao_id,
+          }
         );
+
         if (permissaoResult.error) {
           return res.status(500).json({
             message: "Já existe uma permissão com o nome informado",
@@ -73,8 +104,8 @@ class Permissao_Controller extends Controller {
         } else {
           const permissao = permissaoResult.permissao;
 
-          // Associa a permissão a todas as roles fornecidas
-          await permissao.addRoles(roles); // Adiciona as roles à permissão
+          // Associa a permissão às roles fornecidas
+          await permissao.addRoles(roles);
 
           // Busca novamente a permissão com as roles associadas
           const permissaoComRoles = await devAgile.Permissao.findByPk(
@@ -83,9 +114,11 @@ class Permissao_Controller extends Controller {
               include: [
                 {
                   model: devAgile.Role,
-                  as: "roles", // Inclui as roles associadas
-                  through: { attributes: [] }, // Oculta atributos da tabela intermediária
+                  as: "roles",
+                  through: { attributes: [] },
                 },
+                { model: devAgile.Permissao, as: "parent" },
+                { model: devAgile.TipoPermissao, as: "tipo_permissao" }, // Inclui o tipo da permissão
               ],
             }
           );
@@ -104,9 +137,9 @@ class Permissao_Controller extends Controller {
       }
     } catch (e) {
       console.log(e);
-      return res
-        .status(400)
-        .json({ message: `Erro ao criar, contate o administrador do sistema` });
+      return res.status(400).json({
+        message: `Erro ao criar, contate o administrador do sistema`,
+      });
     }
   }
 
@@ -128,6 +161,71 @@ class Permissao_Controller extends Controller {
       console.log(e);
       return res.status(500).json({
         message: `erro ao buscar registro, contate o administrador do sistema`,
+      });
+    }
+  }
+
+  async atualizaPermissao_Controller(req, res) {
+    const { id } = req.params;
+    const { nome, descricao, parent_id, tipo_permissao_id, roleIds } = req.body;
+
+    try {
+      // Verifica se a permissão existe
+      const permissao = await permissao_services.pegaPermissaoPorId_Services(
+        id
+      );
+      if (!permissao) {
+        return res.status(404).json({ message: "Permissão não encontrada" });
+      }
+
+      // Validação do tipo_permissao_id (se informado)
+      if (tipo_permissao_id) {
+        const tipoPermissao =
+          await tipo_permissao_services.pegaTipoPermissaoPorId_Services(
+            tipo_permissao_id
+          );
+        if (!tipoPermissao) {
+          return res
+            .status(404)
+            .json({ message: "Tipo de permissão não encontrado" });
+        }
+      }
+
+      // Validação do parent_id (se informado)
+      if (parent_id) {
+        const parentPermissao =
+          await permissao_services.pegaPermissaoPorId_Services(parent_id);
+        if (!parentPermissao) {
+          return res
+            .status(404)
+            .json({ message: "Permissão pai não encontrada" });
+        }
+      }
+
+      // Atualiza a permissão
+      const permissaoAtualizada =
+        await permissao_services.atualizaPermissao_Services(id, {
+          nome,
+          descricao,
+          parent_id,
+          tipo_permissao_id,
+        });
+
+      // Atualiza as roles associadas (se fornecidas)
+      if (roleIds && Array.isArray(roleIds)) {
+        const roles = await role_services.pegaTodosRole_Services(roleIds);
+        await permissao.setRoles(roles);
+      }
+
+      return res.status(200).json({
+        message: "Permissão atualizada com sucesso",
+        permissao: permissaoAtualizada,
+      });
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({
+        message:
+          "Erro ao atualizar permissão, contate o administrador do sistema",
       });
     }
   }

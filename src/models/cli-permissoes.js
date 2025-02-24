@@ -28,11 +28,28 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "permissao_id",
         as: "acoes",
       });
-      Permissao.hasMany(models.Parametros,{
-        foreignKey:"tipo_id",
-        as: "parametros_tela"
-      })
 
+      // Relacionamento com parâmetros
+      Permissao.hasMany(models.Parametros, {
+        foreignKey: "tipo_id",
+        as: "parametros_tela",
+      });
+
+      // Relacionamento com tipo_permissoes (Cada permissão tem um tipo)
+      Permissao.belongsTo(models.tipo_permissoes, {
+        foreignKey: "tipo_permissao_id",
+        as: "tipoPermissao",
+      });
+
+      Permissao.belongsTo(models.Permissao, {
+        foreignKey: "parent_id",
+        as: "parent", // Nome usado para buscar a permissão pai
+      });
+
+      Permissao.hasMany(models.Permissao, {
+        foreignKey: "parent_id",
+        as: "subpermissoes", // Nome usado para buscar as subpermissões
+      });
     }
   }
 
@@ -40,6 +57,8 @@ module.exports = (sequelize, DataTypes) => {
     {
       nome: DataTypes.STRING,
       descricao: DataTypes.STRING,
+      tipo_permissao_id: DataTypes.UUID,
+      parent_id: DataTypes.UUID,
     },
     {
       sequelize,

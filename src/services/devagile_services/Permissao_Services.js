@@ -9,9 +9,7 @@ class Permissao_Services extends Services {
 
   async criaPermissao_Services(dados) {
     const permissaoExistente = await devAgile[this.nomeModel].findOne({
-      where: {
-        nome: dados.nome,
-      },
+      where: { nome: dados.nome },
     });
 
     if (permissaoExistente !== null) {
@@ -22,8 +20,11 @@ class Permissao_Services extends Services {
         id: uuid.v4(),
         nome: dados.nome,
         descricao: dados.descricao,
+        parent_id: dados.parent_id || null, // Inclui parent_id se houver
+        tipo_permissao_id: dados.tipo_permissao_id || null, // Inclui tipo_permissao_id se houver
       });
-      return { error: false, permissao: newPermissao }; // Retorna o objeto correto
+
+      return { error: false, permissao: newPermissao };
     }
   }
 
@@ -60,6 +61,14 @@ class Permissao_Services extends Services {
 
   async pegaPermissaoPorId_Services(id) {
     return devAgile[this.nomeModel].findByPk(id);
+  }
+
+  async atualizaPermissao_Services(id, dados) {
+    const permissao = await devAgile[this.nomeModel].findByPk(id);
+    if (!permissao) return null;
+
+    await permissao.update(dados);
+    return permissao;
   }
 
   async deletaPermissaoPorId_Services(id) {

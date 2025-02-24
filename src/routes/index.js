@@ -6,6 +6,7 @@ const permissao_router = require("./devagile_routes/permissao_Routes");
 const empresas_router = require("./devagile_routes/empresas_Routes");
 const acoesTela_router = require("./devagile_routes/acaoTela_Routes");
 const parametros_route = require("./devagile_routes/parametros_Routes");
+const tipos_permissoes_route = require("./devagile_routes/TipoPermissao_Routes");
 const cors = require("cors");
 
 module.exports = (app) => {
@@ -18,4 +19,5 @@ module.exports = (app) => {
   app.use(empresas_router);
   app.use(acoesTela_router);
   app.use(parametros_route);
+  app.use(tipos_permissoes_route);
 };
