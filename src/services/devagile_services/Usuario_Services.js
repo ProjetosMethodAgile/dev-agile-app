@@ -121,7 +121,7 @@ class Usuario_Services extends Services {
   async cadastraUsuario_Services(bodyReq, permissoesCRUD) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
-      // Valida se os role_id e permissao_id são válidos
+      // Valida roles e permissões
       if (!bodyReq.roles_id.every((id) => isUuid(id))) {
         return { status: false, message: "Informe um cargo válido." };
       }
@@ -129,7 +129,7 @@ class Usuario_Services extends Services {
         return { status: false, message: "Informe uma permissão válida." };
       }
 
-      // Verifica se as roles existem
+      // Busca roles e permissões associadas
       const roles = await devAgile.Role.findAll({
         where: { id: { [Op.in]: bodyReq.roles_id } },
         transaction,
@@ -141,7 +141,6 @@ class Usuario_Services extends Services {
         };
       }
 
-      // Verifica se as permissões (telas) existem
       const permissoes = await devAgile.Permissao.findAll({
         where: { id: { [Op.in]: bodyReq.permissoes_id } },
         transaction,
@@ -153,7 +152,7 @@ class Usuario_Services extends Services {
         };
       }
 
-      // Verifica a existência da empresa
+      // Valida empresa
       if (!isUuid(bodyReq.empresa_id)) {
         return { status: false, message: "Informe uma empresa válida." };
       }
@@ -164,7 +163,7 @@ class Usuario_Services extends Services {
         return { status: false, message: "Empresa não encontrada." };
       }
 
-      // Cria o usuário (com id gerado via uuid.v4() e demais dados)
+      // Cria o usuário
       const usuario = await devAgile.Usuario.create(
         { id: uuid.v4(), ...bodyReq },
         { transaction }
@@ -174,41 +173,36 @@ class Usuario_Services extends Services {
         return { status: false, message: "Erro ao cadastrar o usuário" };
       }
 
-      // Associa roles ao usuário
+      // Associa roles e permissões ao usuário
       await usuario.addUsuario_roles(bodyReq.roles_id, { transaction });
-      // Associa permissões (telas) ao usuário
       await usuario.addUsuario_permissoes(bodyReq.permissoes_id, {
         transaction,
       });
 
-      // Cria as permissões CRUD para a tela (UserPermissionAccess)
+      // Adiciona permissões CRUD incluindo subtelas herdadas
       if (permissoesCRUD && permissoesCRUD.length) {
         for (const permissao of permissoesCRUD) {
-          const { permissao_id, can_create, can_read, can_update, can_delete } =
-            permissao;
           await devAgile.UserPermissionAccess.create(
             {
               usuario_id: usuario.id,
-              permissao_id,
-              can_create,
-              can_read,
-              can_update,
-              can_delete,
+              permissao_id: permissao.permissao_id,
+              can_create: permissao.can_create,
+              can_read: permissao.can_read,
+              can_update: permissao.can_update,
+              can_delete: permissao.can_delete,
             },
             { transaction }
           );
         }
       }
 
-      // Vincula o usuário à empresa
+      // Associa o usuário à empresa
       await devAgile.Usuario_Empresa.create(
         { usuario_id: usuario.id, empresa_id: bodyReq.empresa_id },
         { transaction }
       );
 
-      // NOVO: Vincula as ações unitárias (UserAcaoTela) se fornecidas no body.
-      // Suponha que o corpo da requisição contenha um array "acoesTela",
-      // onde cada objeto possui ao menos a propriedade "acao_tela_id".
+      // Associa ações unitárias
       if (
         bodyReq.acoesTela &&
         Array.isArray(bodyReq.acoesTela) &&
@@ -217,13 +211,12 @@ class Usuario_Services extends Services {
         await devAgile.UserAcaoTela.bulkCreate(
           bodyReq.acoesTela.map((acao) => ({
             usuario_id: usuario.id,
-            acao_tela_id: acao.acao_tela_id, // Certifique-se de que esse campo está presente no objeto
+            acao_tela_id: acao.acao_tela_id,
           })),
           { transaction }
         );
       }
 
-      // Commit na transação se tudo der certo
       await transaction.commit();
       return { status: true };
     } catch (e) {

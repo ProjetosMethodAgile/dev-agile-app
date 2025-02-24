@@ -28,4 +28,9 @@ route.get("/api/permissoes/user/:id", checkTokenLogin, (req, res) =>
   permissao_controller.pegaPermissaoEacoesPorUserId_Controller(req, res)
 );
 
+// Atualizar permissão existente
+route.put("/api/permissoes/:id", checkTokenLogin, (req, res) =>
+  permissao_controller.atualizaPermissao_Controller(req, res)
+);
+
 module.exports = route;

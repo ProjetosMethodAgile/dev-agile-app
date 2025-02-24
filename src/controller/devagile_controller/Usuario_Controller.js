@@ -1,6 +1,7 @@
 const Usuario_Services = require("../../services/devagile_services/Usuario_Services");
 const Controller = require("../Controller");
 const bcrypt = require("bcrypt");
+const { devAgile } = require("../../models/index.js");
 const camposObrigatorios = [
   "nome",
   "email",
@@ -10,6 +11,7 @@ const camposObrigatorios = [
   "permissoes_id",
   "empresa_id",
 ];
+
 const usuario_services = new Usuario_Services();
 
 class Usuario_Controller extends Controller {
@@ -18,12 +20,10 @@ class Usuario_Controller extends Controller {
   }
 
   async registerUsuario_Controller(req, res) {
-    // Supondo que o body contenha: email, senha, roles_id, permissoes_id, permissoesCRUD, empresa_id
     const { email, permissoesCRUD, empresa_id } = req.body;
     const bodyReq = req.body;
 
     try {
-      // Valida os campos obrigatórios (método allowNull personalizado)
       const isTrue = await this.allowNull(req, res);
       if (!isTrue.status) {
         return res.status(500).json({
@@ -44,7 +44,7 @@ class Usuario_Controller extends Controller {
         });
       }
 
-      // Valida se permissoesCRUD foi passado e se é um array
+      // Verifica se permissoesCRUD é válido
       if (!permissoesCRUD || !Array.isArray(permissoesCRUD)) {
         return res.status(400).json({
           message: "Permissões CRUD não fornecidas ou inválidas",
@@ -52,38 +52,48 @@ class Usuario_Controller extends Controller {
         });
       }
 
-      // Valida os campos obrigatórios dentro de cada objeto de permissoesCRUD
-      const invalidPermissoes = permissoesCRUD.some(
-        (permissao) =>
-          !permissao.permissao_id ||
-          typeof permissao.can_create === "undefined" ||
-          typeof permissao.can_read === "undefined" ||
-          typeof permissao.can_update === "undefined" ||
-          typeof permissao.can_delete === "undefined"
-      );
-      if (invalidPermissoes) {
-        return res.status(400).json({
-          message:
-            "As permissões CRUD fornecidas estão incompletas ou inválidas",
-          error: true,
+      // Valida permissões CRUD e busca subtelas associadas
+      let permissoesComSubtelas = [];
+      for (const permissao of permissoesCRUD) {
+        const tela = await devAgile.Permissao.findByPk(permissao.permissao_id, {
+          include: [{ model: devAgile.Permissao, as: "subpermissoes" }],
         });
+
+        if (!tela) {
+          return res.status(400).json({
+            message: `A permissão ${permissao.permissao_id} não existe`,
+            error: true,
+          });
+        }
+
+        // Adiciona a permissão principal e todas as subtelas encontradas
+        permissoesComSubtelas.push(permissao);
+        if (tela.subpermissoes.length > 0) {
+          tela.subpermissoes.forEach((subtela) => {
+            permissoesComSubtelas.push({
+              permissao_id: subtela.id,
+              can_create: permissao.can_create,
+              can_read: permissao.can_read,
+              can_update: permissao.can_update,
+              can_delete: permissao.can_delete,
+            });
+          });
+        }
       }
 
-      // Verifica se o empresa_id foi passado e se a empresa existe
+      // Valida se empresa existe
       if (!empresa_id) {
-        return res.status(400).json({
-          message: "ID da empresa não fornecido",
-          error: true,
-        });
+        return res
+          .status(400)
+          .json({ message: "ID da empresa não fornecido", error: true });
       }
       const empresa = await usuario_services.pegaUsuarioPorId_Services(
         empresa_id
       );
       if (!empresa) {
-        return res.status(404).json({
-          message: "Empresa não encontrada",
-          error: true,
-        });
+        return res
+          .status(404)
+          .json({ message: "Empresa não encontrada", error: true });
       }
 
       // Gera a senha criptografada
@@ -94,7 +104,7 @@ class Usuario_Controller extends Controller {
       // Chama o serviço para registrar o usuário
       const createUser = await usuario_services.cadastraUsuario_Services(
         bodyReq,
-        permissoesCRUD
+        permissoesComSubtelas
       );
       if (createUser.status) {
         return res.status(200).json({
