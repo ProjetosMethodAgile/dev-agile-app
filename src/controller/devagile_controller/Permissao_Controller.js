@@ -76,7 +76,9 @@ class Permissao_Controller extends Controller {
       // Validação do tipo_permissao_id (se informado)
       let tipoPermissao = null;
       if (tipo_permissao_id) {
-        tipoPermissao = await devAgile.TipoPermissao.findByPk(
+        console.log(tipo_permissao_id);
+
+        tipoPermissao = await devAgile.tipo_permissoes.findByPk(
           tipo_permissao_id
         );
         if (!tipoPermissao) {
@@ -108,24 +110,24 @@ class Permissao_Controller extends Controller {
           await permissao.addRoles(roles);
 
           // Busca novamente a permissão com as roles associadas
-          const permissaoComRoles = await devAgile.Permissao.findByPk(
-            permissao.id,
-            {
-              include: [
-                {
-                  model: devAgile.Role,
-                  as: "roles",
-                  through: { attributes: [] },
-                },
-                { model: devAgile.Permissao, as: "parent" },
-                { model: devAgile.TipoPermissao, as: "tipo_permissao" }, // Inclui o tipo da permissão
-              ],
-            }
-          );
+          // const permissaoComRoles = await devAgile.Permissao.findByPk(
+          //   permissao.id,
+          //   {
+          //     include: [
+          //       {
+          //         model: devAgile.Role,
+          //         as: "roles",
+          //         through: { attributes: [] },
+          //       },
+          //       { model: devAgile.Permissao },
+          //       { model: devAgile.TipoPermissao },
+          //     ],
+          //   }
+          // );
 
           return res.status(200).json({
             message: "Permissão criada e vinculada às roles com sucesso",
-            permissao: permissaoComRoles,
+            // permissao: permissaoComRoles,
           });
         }
       } else {
