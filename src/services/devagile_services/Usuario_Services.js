@@ -118,18 +118,19 @@ class Usuario_Services extends Services {
     }
   }
 
-  async cadastraUsuario_Services(bodyReq, permissoesCRUD) {
+  async cadastraUsuario_Services(bodyReq, permissoes) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
-      // Valida roles e permissões
+      // Valida roles
       if (!bodyReq.roles_id.every((id) => isUuid(id))) {
         return { status: false, message: "Informe um cargo válido." };
       }
-      if (!bodyReq.permissoes_id.every((id) => isUuid(id))) {
+      // Valida que cada permissão possui um ID válido
+      if (!permissoes.every((p) => isUuid(p.permissao_id))) {
         return { status: false, message: "Informe uma permissão válida." };
       }
 
-      // Busca roles e permissões associadas
+      // Busca roles associadas
       const roles = await devAgile.Role.findAll({
         where: { id: { [Op.in]: bodyReq.roles_id } },
         transaction,
@@ -141,18 +142,20 @@ class Usuario_Services extends Services {
         };
       }
 
-      const permissoes = await devAgile.Permissao.findAll({
-        where: { id: { [Op.in]: bodyReq.permissoes_id } },
+      // Busca as permissões (únicas) a partir do array agrupado
+      const permissoesIds = [...new Set(permissoes.map((p) => p.permissao_id))];
+      const permissoesEncontradas = await devAgile.Permissao.findAll({
+        where: { id: { [Op.in]: permissoesIds } },
         transaction,
       });
-      if (permissoes.length !== bodyReq.permissoes_id.length) {
+      if (permissoesEncontradas.length !== permissoesIds.length) {
         return {
           status: false,
           message: "Uma ou mais permissões não foram encontradas.",
         };
       }
 
-      // Valida empresa
+      // Valida a empresa
       if (!isUuid(bodyReq.empresa_id)) {
         return { status: false, message: "Informe uma empresa válida." };
       }
@@ -175,24 +178,32 @@ class Usuario_Services extends Services {
 
       // Associa roles e permissões ao usuário
       await usuario.addUsuario_roles(bodyReq.roles_id, { transaction });
-      await usuario.addUsuario_permissoes(bodyReq.permissoes_id, {
-        transaction,
-      });
+      await usuario.addUsuario_permissoes(permissoesIds, { transaction });
 
-      // Adiciona permissões CRUD incluindo subtelas herdadas
-      if (permissoesCRUD && permissoesCRUD.length) {
-        for (const permissao of permissoesCRUD) {
+      // Registra os acessos (CRUD) para cada permissão (e suas subtelas)
+      if (permissoes && permissoes.length) {
+        for (const perm of permissoes) {
           await devAgile.UserPermissionAccess.create(
             {
               usuario_id: usuario.id,
-              permissao_id: permissao.permissao_id,
-              can_create: permissao.can_create,
-              can_read: permissao.can_read,
-              can_update: permissao.can_update,
-              can_delete: permissao.can_delete,
+              permissao_id: perm.permissao_id,
+              can_create: perm.acessos.can_create,
+              can_read: perm.acessos.can_read,
+              can_update: perm.acessos.can_update,
+              can_delete: perm.acessos.can_delete,
             },
             { transaction }
           );
+          // Se houver ações para essa permissão, insere-as
+          if (perm.acoes && perm.acoes.length > 0) {
+            await devAgile.UserAcaoTela.bulkCreate(
+              perm.acoes.map((acao) => ({
+                usuario_id: usuario.id,
+                acao_tela_id: acao.acao_tela_id,
+              })),
+              { transaction }
+            );
+          }
         }
       }
 
@@ -201,21 +212,6 @@ class Usuario_Services extends Services {
         { usuario_id: usuario.id, empresa_id: bodyReq.empresa_id },
         { transaction }
       );
-
-      // Associa ações unitárias
-      if (
-        bodyReq.acoesTela &&
-        Array.isArray(bodyReq.acoesTela) &&
-        bodyReq.acoesTela.length > 0
-      ) {
-        await devAgile.UserAcaoTela.bulkCreate(
-          bodyReq.acoesTela.map((acao) => ({
-            usuario_id: usuario.id,
-            acao_tela_id: acao.acao_tela_id,
-          })),
-          { transaction }
-        );
-      }
 
       await transaction.commit();
       return { status: true };
@@ -297,7 +293,7 @@ class Usuario_Services extends Services {
 
   async pegaUsuarioPorId_Services(id) {
     const usuario = await devAgile.Usuario.findOne({
-      where: { id: id },
+      where: { id },
       include: [
         {
           model: devAgile.Empresa,
@@ -322,7 +318,13 @@ class Usuario_Services extends Services {
         {
           model: devAgile.Permissao,
           as: "usuario_permissoes",
-          attributes: ["id", "nome", "descricao"],
+          attributes: [
+            "id",
+            "nome",
+            "descricao",
+            "tipo_permissao_id",
+            "parent_id",
+          ],
           through: { attributes: [] },
           include: [
             {
@@ -336,55 +338,74 @@ class Usuario_Services extends Services {
               ],
               where: { usuario_id: id },
             },
-          ],
-        },
-        {
-          model: devAgile.UserAcaoTela,
-          as: "user_acoes_tela",
-          include: [
             {
               model: devAgile.AcaoTela,
-              as: "acao_tela",
+              as: "acoes",
               attributes: ["id", "nome", "descricao"],
             },
           ],
         },
       ],
     });
-    if (usuario === null) {
+
+    if (!usuario) {
       console.log("Registro não encontrado na base de dados");
       return { status: false, usuario: null };
     }
 
-    // Agrupa as permissões por tela usando UserPermissionAccess
-    const permissoesPorTela = usuario.usuario_permissoes.reduce(
-      (acc, permissao) => {
-        const telaNome = permissao.nome;
-        if (!acc[telaNome]) {
-          acc[telaNome] = {
-            tela: telaNome,
-            permissoes: [],
-          };
-        }
-        const crudPermissions = permissao.user_permissions_access[0];
-        acc[telaNome].permissoes.push({
-          permissao_id: permissao.id,
-          can_create: crudPermissions?.can_create || false,
-          can_read: crudPermissions?.can_read || false,
-          can_update: crudPermissions?.can_update || false,
-          can_delete: crudPermissions?.can_delete || false,
-        });
-        return acc;
-      },
-      {}
+    // IDs fixos dos tipos de permissão
+    const TIPO_TELA = process.env.ID_TIPO_TELA;
+    const TIPO_SUBTELA = process.env.ID_TIPO_SUB_TELA;
+
+    const todasPermissoes = usuario.usuario_permissoes;
+
+    // Separa as permissões em telas e subtelas
+    const permissoesTelas = todasPermissoes.filter(
+      (p) => p.tipo_permissao_id === TIPO_TELA
+    );
+    const permissoesSubTelas = todasPermissoes.filter(
+      (p) => p.tipo_permissao_id === TIPO_SUBTELA
     );
 
-    // Formata o array de ações unitárias, extraindo por exemplo apenas os IDs da ação
-    const acoesTela = usuario.user_acoes_tela.map(
-      (registro) => registro.acao_tela.id
-    );
+    // Função auxiliar para extrair os acessos (CRUD)
+    const extrairAcessos = (p) => {
+      const crud = p.user_permissions_access && p.user_permissions_access[0];
+      return {
+        can_create: crud ? crud.can_create : false,
+        can_read: crud ? crud.can_read : false,
+        can_update: crud ? crud.can_update : false,
+        can_delete: crud ? crud.can_delete : false,
+      };
+    };
 
-    // Organiza a resposta final
+    // Função auxiliar para extrair as ações vinculadas a uma permissão
+    const extrairAcoes = (p) => {
+      return (p.acoes || []).map((acao) => ({
+        id: acao.id,
+        nome: acao.nome,
+        descricao: acao.descricao,
+      }));
+    };
+
+    // Organiza as permissões, adicionando suas ações e as subtelas
+    const permissoesEstruturadas = permissoesTelas.map((tela) => ({
+      id: tela.id,
+      nome: tela.nome,
+      descricao: tela.descricao,
+      acessos: extrairAcessos(tela),
+      acoes: extrairAcoes(tela),
+      subpermissoes: permissoesSubTelas
+        .filter((sub) => sub.parent_id === tela.id)
+        .map((sub) => ({
+          id: sub.id,
+          nome: sub.nome,
+          descricao: sub.descricao,
+          acessos: extrairAcessos(sub),
+          acoes: extrairAcoes(sub),
+        })),
+    }));
+
+    // Monta o objeto final para o front-end
     return {
       status: true,
       usuario: {
@@ -394,8 +415,7 @@ class Usuario_Services extends Services {
         contato: usuario.contato,
         empresa: usuario.empresas,
         usuario_roles: usuario.usuario_roles,
-        usuario_permissoes_por_tela: Object.values(permissoesPorTela),
-        acoesTela, // Retorna os IDs das ações unitárias vinculadas
+        permissoes: permissoesEstruturadas,
         createdAt: usuario.createdAt,
         updatedAt: usuario.updatedAt,
       },
