@@ -8,24 +8,15 @@ class Permissao_Services extends Services {
   }
 
   async criaPermissao_Services(dados) {
-    const permissaoExistente = await devAgile[this.nomeModel].findOne({
-      where: { nome: dados.nome },
+    const newPermissao = await devAgile[this.nomeModel].create({
+      id: uuid.v4(),
+      nome: dados.nome,
+      descricao: dados.descricao,
+      parent_id: dados.parent_id || null, // Inclui parent_id se houver
+      tipo_permissao_id: dados.tipo_permissao_id || null, // Inclui tipo_permissao_id se houver
     });
 
-    if (permissaoExistente !== null) {
-      console.log("Já existe uma permissão com o nome informado");
-      return { error: true, permissao: permissaoExistente };
-    } else {
-      const newPermissao = await devAgile[this.nomeModel].create({
-        id: uuid.v4(),
-        nome: dados.nome,
-        descricao: dados.descricao,
-        parent_id: dados.parent_id || null, // Inclui parent_id se houver
-        tipo_permissao_id: dados.tipo_permissao_id || null, // Inclui tipo_permissao_id se houver
-      });
-
-      return { error: false, permissao: newPermissao };
-    }
+    return { error: false, permissao: newPermissao };
   }
 
   async pegaTodosPermissao_Services() {
