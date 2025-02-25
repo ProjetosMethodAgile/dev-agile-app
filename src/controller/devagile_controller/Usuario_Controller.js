@@ -8,7 +8,7 @@ const camposObrigatorios = [
   "senha",
   "contato",
   "roles_id",
-  "permissoes_id",
+  "permissoes",
   "empresa_id",
 ];
 
@@ -20,7 +20,7 @@ class Usuario_Controller extends Controller {
   }
 
   async registerUsuario_Controller(req, res) {
-    const { email, permissoesCRUD, empresa_id } = req.body;
+    const { email, permissoes, empresa_id } = req.body;
     const bodyReq = req.body;
 
     try {
@@ -44,44 +44,44 @@ class Usuario_Controller extends Controller {
         });
       }
 
-      // Verifica se permissoesCRUD é válido
-      if (!permissoesCRUD || !Array.isArray(permissoesCRUD)) {
+      // Verifica se "permissoes" foi informado corretamente
+      if (!permissoes || !Array.isArray(permissoes)) {
         return res.status(400).json({
-          message: "Permissões CRUD não fornecidas ou inválidas",
+          message: "Permissões não fornecidas ou inválidas",
           error: true,
         });
       }
 
-      // Valida permissões CRUD e busca subtelas associadas
+      // Valida cada permissão e adiciona as subtelas, se houver
       let permissoesComSubtelas = [];
-      for (const permissao of permissoesCRUD) {
-        const tela = await devAgile.Permissao.findByPk(permissao.permissao_id, {
+      for (const perm of permissoes) {
+        const tela = await devAgile.Permissao.findByPk(perm.permissao_id, {
           include: [{ model: devAgile.Permissao, as: "subpermissoes" }],
         });
 
         if (!tela) {
           return res.status(400).json({
-            message: `A permissão ${permissao.permissao_id} não existe`,
+            message: `A permissão ${perm.permissao_id} não existe`,
             error: true,
           });
         }
 
-        // Adiciona a permissão principal e todas as subtelas encontradas
-        permissoesComSubtelas.push(permissao);
+        // Adiciona a permissão principal
+        permissoesComSubtelas.push(perm);
+
+        // Se houver subtelas associadas à tela, adiciona-as com os mesmos acessos
         if (tela.subpermissoes.length > 0) {
           tela.subpermissoes.forEach((subtela) => {
             permissoesComSubtelas.push({
               permissao_id: subtela.id,
-              can_create: permissao.can_create,
-              can_read: permissao.can_read,
-              can_update: permissao.can_update,
-              can_delete: permissao.can_delete,
+              acessos: perm.acessos,
+              acoes: [], // Aqui você pode definir ações específicas para a subtela, se necessário
             });
           });
         }
       }
 
-      // Valida se empresa existe
+      // Valida se a empresa foi informada
       if (!empresa_id) {
         return res
           .status(400)
@@ -101,7 +101,7 @@ class Usuario_Controller extends Controller {
       const senhaHash = await bcrypt.hash(bodyReq.senha, salt);
       bodyReq.senha = senhaHash;
 
-      // Chama o serviço para registrar o usuário
+      // Chama o serviço para registrar o usuário com o novo formato de permissões
       const createUser = await usuario_services.cadastraUsuario_Services(
         bodyReq,
         permissoesComSubtelas
@@ -208,15 +208,16 @@ class Usuario_Controller extends Controller {
     const { id } = req.params;
     try {
       const usuario = await usuario_services.pegaUsuarioPorId_Services(id);
-      if (!usuario.status)
+      if (!usuario.status) {
         return res
           .status(400)
-          .json({ message: `usuario não encontrado`, error: true });
+          .json({ message: "Usuário não encontrado", error: true });
+      }
       return res.status(200).json(usuario);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       return res.status(500).json({
-        message: `erro ao buscar registro, contate o administrador do sistema`,
+        message: "Erro ao buscar registro, contate o administrador do sistema",
       });
     }
   }
