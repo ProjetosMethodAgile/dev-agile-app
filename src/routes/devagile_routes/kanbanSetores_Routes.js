@@ -8,7 +8,7 @@ const kanbanSetoresController = new KanbanSetores_Controller();
 // Rota para buscar setores por empresa_id
 router.get(
   "/api/helpdesk/setores/empresa/:empresa_id",
-  checkTokenLogin,
+
   (req, res) =>
     kanbanSetoresController.buscaSetoresPorEmpresa_Controller(req, res)
 );
