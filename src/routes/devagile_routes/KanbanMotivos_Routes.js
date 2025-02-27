@@ -16,7 +16,7 @@ router.get("/api/kanban/motivos", (req, res) =>
 );
 
 // Rota para buscar um motivo pelo ID
-router.get("/api/kanban/motivos/:id", checkTokenLogin, (req, res) =>
+router.get("/api/kanban/motivos/:id", (req, res) =>
   kanbanMotivosController.pegaMotivoPorId_Controller(req, res)
 );
 
