@@ -11,12 +11,12 @@ router.post("/api/kanban/motivos", checkTokenLogin, (req, res) =>
 );
 
 // Rota para listar todos os motivos
-router.get("/api/kanban/motivos", checkTokenLogin, (req, res) =>
+router.get("/api/kanban/motivos", (req, res) =>
   kanbanMotivosController.pegaTodosMotivos_Controller(req, res)
 );
 
 // Rota para buscar um motivo pelo ID
-router.get("/api/kanban/motivos/:id", checkTokenLogin, (req, res) =>
+router.get("/api/kanban/motivos/:id", (req, res) =>
   kanbanMotivosController.pegaMotivoPorId_Controller(req, res)
 );
 
