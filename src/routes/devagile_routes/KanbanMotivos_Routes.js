@@ -14,6 +14,9 @@ router.post("/api/kanban/motivos", checkTokenLogin, (req, res) =>
 router.get("/api/kanban/motivos", (req, res) =>
   kanbanMotivosController.pegaTodosMotivos_Controller(req, res)
 );
+router.get("/api/kanban/motivos/tag/:tag", (req, res) =>
+  kanbanMotivosController.pegaMotivoPorTag_controller(req, res)
+);
 
 // Rota para buscar um motivo pelo ID
 router.get("/api/kanban/motivos/:id", (req, res) =>

@@ -23,6 +23,27 @@ class KanbanMotivos_Controller {
     }
     return res.status(200).json(result.motivos);
   }
+  
+  async pegaMotivoPorTag_controller(req, res) {
+    try {
+      const { tag } = req.params; // Pegando a tag corretamente
+  
+      if (!tag) {
+        return res.status(400).json({ error: true, message: "Tag não fornecida." });
+      }
+  
+      const result = await this.kanbanMotivosService.pegaMotivoPorTag_Services(tag);
+  
+      if (result.error) {
+        return res.status(500).json({ error: true, message: result.message });
+      }
+  
+      return res.status(200).json(result.motivos);
+    } catch (error) {
+      console.error("Erro no controlador:", error);
+      return res.status(500).json({ error: true, message: "Erro interno do servidor." });
+    }
+  }
 
   // Busca um motivo pelo ID
   async pegaMotivoPorId_Controller(req, res) {
