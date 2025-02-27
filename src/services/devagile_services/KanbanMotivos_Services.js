@@ -34,10 +34,11 @@ class KanbanMotivos_Services extends Services {
       return { error: true, message: "Erro ao buscar motivos" };
     }
   }
-  async pegaMotivoPorTag_Services(nome) {
+  
+  async pegaMotivoPorID_setor_Services(idsetor) {
     try {
-      const motivos = await devAgile[this.nomeModel].findOne({
-        where: { descricao:nome },
+      const motivos = await devAgile[this.nomeModel].findAll({
+        where: { setor_id:idsetor },
       });
   
       return { error: false, motivos };

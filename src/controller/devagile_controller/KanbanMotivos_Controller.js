@@ -23,16 +23,16 @@ class KanbanMotivos_Controller {
     }
     return res.status(200).json(result.motivos);
   }
-  
-  async pegaMotivoPorTag_controller(req, res) {
+
+  async pegaMotivoPorID_setor_controller(req, res) {
     try {
-      const { tag } = req.params; // Pegando a tag corretamente
+      const { id } = req.params; // Pegando a tag corretamente
   
-      if (!tag) {
-        return res.status(400).json({ error: true, message: "Tag não fornecida." });
+      if (!id) {
+        return res.status(400).json({ error: true, message: "Id não fornecida." });
       }
   
-      const result = await this.kanbanMotivosService.pegaMotivoPorTag_Services(tag);
+      const result = await this.kanbanMotivosService.pegaMotivoPorID_setor_Services(id);
   
       if (result.error) {
         return res.status(500).json({ error: true, message: result.message });
