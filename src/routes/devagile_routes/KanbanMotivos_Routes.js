@@ -11,7 +11,7 @@ router.post("/api/kanban/motivos", checkTokenLogin, (req, res) =>
 );
 
 // Rota para listar todos os motivos
-router.get("/api/kanban/motivos", checkTokenLogin, (req, res) =>
+router.get("/api/kanban/motivos", (req, res) =>
   kanbanMotivosController.pegaTodosMotivos_Controller(req, res)
 );
 
