@@ -1,6 +1,7 @@
 const Services = require("../Services.js");
 const { devAgile } = require("../../models/index.js");
 const uuid = require("uuid");
+const { where } = require("sequelize");
 
 class KanbanMotivos_Services extends Services {
   constructor() {
@@ -33,7 +34,20 @@ class KanbanMotivos_Services extends Services {
       return { error: true, message: "Erro ao buscar motivos" };
     }
   }
-
+  
+  async pegaMotivoPorID_setor_Services(idsetor) {
+    try {
+      const motivos = await devAgile[this.nomeModel].findAll({
+        where: { setor_id:idsetor },
+      });
+  
+      return { error: false, motivos };
+    } catch (err) {
+      console.error("Erro ao buscar motivos:", err);
+      return { error: true, message: "Erro ao buscar motivos" };
+    }
+  }
+  
   // Retorna um motivo pelo ID
   async pegaMotivoPorId_Services(id) {
     try {

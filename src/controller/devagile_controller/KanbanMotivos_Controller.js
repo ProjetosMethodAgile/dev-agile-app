@@ -24,6 +24,27 @@ class KanbanMotivos_Controller {
     return res.status(200).json(result.motivos);
   }
 
+  async pegaMotivoPorID_setor_controller(req, res) {
+    try {
+      const { id } = req.params; // Pegando a tag corretamente
+  
+      if (!id) {
+        return res.status(400).json({ error: true, message: "Id não fornecida." });
+      }
+  
+      const result = await this.kanbanMotivosService.pegaMotivoPorID_setor_Services(id);
+  
+      if (result.error) {
+        return res.status(500).json({ error: true, message: result.message });
+      }
+  
+      return res.status(200).json(result.motivos);
+    } catch (error) {
+      console.error("Erro no controlador:", error);
+      return res.status(500).json({ error: true, message: "Erro interno do servidor." });
+    }
+  }
+
   // Busca um motivo pelo ID
   async pegaMotivoPorId_Controller(req, res) {
     const { id } = req.params;
