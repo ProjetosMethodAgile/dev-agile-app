@@ -2,8 +2,7 @@
 const Controller = require("../Controller");
 const Empresa_Services = require("../../services/devagile_services/Empresa_Services");
 const Permissao_Services = require("../../services/devagile_services/Permissao_Services");
-
-const Parametros_services = require("../../services/devagile_services/Parametros_Services")
+const Parametros_Services = require("../../services/devagile_services/Parametros_Services")
 
 const parametros_services = new Parametros_Services();
 
