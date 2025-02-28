@@ -5,7 +5,7 @@ const uuid = require("uuid");
 class KanbanColumn_Services extends Services {
   async validaPosicaoColumn_Services(posicao, setor_id) {
     const data = await devAgile.KanbanComlumns.findAll({
-      where: { posicao: posicao, setor_id: setor_id },
+      where: { posicao, setor_id },
     });
 
     if (data.length) {
@@ -25,13 +25,25 @@ class KanbanColumn_Services extends Services {
 
     if (!column) {
       return {
-        column,
         error: true,
         message: "Erro ao cadastrar coluna",
-        column,
       };
     }
-    return { column, error: false, message: "cadastro realizado com sucesso" };
+    return { column, error: false, message: "Cadastro realizado com sucesso" };
+  }
+
+  async validaSetorID_Service(setor_id) {
+    try {
+      let columns = [];
+      if (setor_id) {
+        columns = await devAgile.KanbanComlumns.findAll({
+          where: { setor_id },
+        });
+      }
+      return columns;
+    } catch (error) {
+      throw new Error(`Erro ao buscar setor: ${error.message}`);
+    }
   }
 }
 

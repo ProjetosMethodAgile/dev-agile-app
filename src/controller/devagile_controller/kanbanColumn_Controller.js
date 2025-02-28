@@ -1,9 +1,11 @@
 const { devAgile } = require("../../models");
 const KanbanColumn_Services = require("../../services/devagile_services/kanbanColumn_Services");
+const KanbanSetores_Services = require("../../services/devagile_services/kanbanSetores_Services");
 const Controller = require("../Controller");
 
 const kanbanColumn_services = new KanbanColumn_Services();
 const camposObrigatorios = ["nome", "posicao", "setor_id"];
+const kanbanSetoresService = new KanbanSetores_Services();
 
 class KanbanColumn_Controller extends Controller {
   constructor() {
@@ -26,24 +28,25 @@ class KanbanColumn_Controller extends Controller {
       where: { id: setor_id },
     });
 
-    if (setor === null) {
-      return res
-        .status(404)
-        .json({ message: "não foi possivel cadastrar a coluna", error: true });
-    }
-
-    const ValidaPosicao =
-      await kanbanColumn_services.validaPosicaoColumn_Services(
-        posicao,
-        setor_id
-      );
-
-    if (ValidaPosicao.error) {
+    if (!setor) {
       return res.status(404).json({
-        message: "posição já utilizada, favor informar outra",
+        message: "Não foi possível cadastrar a coluna",
         error: true,
       });
     }
+
+    const validaPosicao = await kanbanColumn_services.validaPosicaoColumn_Services(
+      posicao,
+      setor_id
+    );
+
+    if (validaPosicao.error) {
+      return res.status(404).json({
+        message: "Posição já utilizada, favor informar outra",
+        error: true,
+      });
+    }
+
     const column = await kanbanColumn_services.criaColumn_Services(
       nome,
       posicao,
@@ -64,7 +67,27 @@ class KanbanColumn_Controller extends Controller {
   }
 
   async pegaTodasColumnsPorSetorID(req, res) {
-    const { setor_id } = req.body;
+    try {
+      const { setor_id } = req.body;
+
+      // Valida o setor utilizando o serviço de setores
+      const setor = await kanbanSetoresService.pegaSetorPorId_Services(setor_id);
+      if (!setor) {
+        return res.status(404).json({
+          message: "Setor não encontrado",
+          error: true,
+        });
+      }
+
+      // Se o setor existe, busca todas as colunas associadas a ele
+      const columns = await devAgile.KanbanComlumns.findAll({
+        where: { setor_id },
+      });
+
+      return res.status(200).json({ columns });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
   }
 }
 
