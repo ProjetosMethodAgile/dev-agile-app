@@ -12,7 +12,7 @@ const httpsOptions = {
   cert: fs.readFileSync("/etc/letsencrypt/live/devagile.com.br/fullchain.pem"),
 };
 
-const app = https.createServer(httpsOptions, app);
+const server = https.createServer(httpsOptions, app);
 
 server.listen(PORT, () => {
   console.log("servidor de aplicação ligado na porta " + PORT);
