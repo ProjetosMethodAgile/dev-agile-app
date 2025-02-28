@@ -18,6 +18,13 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "atendente_id",
         as: "MessageAtendente",
       });
+
+      // No model KanbanAtendenteHelpDesk:
+      KanbanAtendenteHelpDesk.belongsToMany(models.KanbanSetores, {
+        through: "kanban_atendente_setores",
+        foreignKey: "atendente_id",
+        as: "Setores",
+      });
     }
   }
   KanbanAtendenteHelpDesk.init(

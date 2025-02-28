@@ -9,6 +9,8 @@ const parametros_route = require("./devagile_routes/parametros_Routes");
 const tipos_permissoes_route = require("./devagile_routes/TipoPermissao_Routes");
 const kanban_setores_route = require("./devagile_routes/kanbanSetores_Routes");
 const kanban_motivos_route = require("./devagile_routes/KanbanMotivos_Routes");
+const kanban_atendente_route = require("./devagile_routes/kanbanAtendente_Routes");
+const kanban_column_route = require("./devagile_routes/kanbanColumns_Routes");
 const cors = require("cors");
 
 module.exports = (app) => {
@@ -24,4 +26,6 @@ module.exports = (app) => {
   app.use(tipos_permissoes_route);
   app.use(kanban_setores_route);
   app.use(kanban_motivos_route);
+  app.use(kanban_atendente_route);
+  app.use(kanban_column_route);
 };
