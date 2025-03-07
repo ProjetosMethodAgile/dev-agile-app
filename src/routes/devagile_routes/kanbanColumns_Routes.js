@@ -11,7 +11,7 @@ router.post("/api/helpdesk/column", (req, res) =>
 );
 
 // Rota para buscar todas as colunas por setor
-router.get("/api/helpdesk/columnsBySetor", (req, res) =>
+router.get("/api/helpdesk/columnsBySetor/:id", (req, res) =>
   kanbanColunm_controller.pegaTodasColumnsPorSetorID(req, res)
 );
 

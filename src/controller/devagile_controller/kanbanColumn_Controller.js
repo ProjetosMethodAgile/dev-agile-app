@@ -68,10 +68,10 @@ class KanbanColumn_Controller extends Controller {
 
   async pegaTodasColumnsPorSetorID(req, res) {
     try {
-      const { setor_id } = req.body;
+      const { id } = req.params;
 
       // Valida o setor utilizando o serviço de setores
-      const setor = await kanbanSetoresService.pegaSetorPorId_Services(setor_id);
+      const setor = await kanbanSetoresService.pegaSetorPorId_Services(id);
       if (!setor) {
         return res.status(404).json({
           message: "Setor não encontrado",
@@ -81,7 +81,7 @@ class KanbanColumn_Controller extends Controller {
 
       // Se o setor existe, busca todas as colunas associadas a ele
       const columns = await devAgile.KanbanComlumns.findAll({
-        where: { setor_id },
+        where: { setor_id:id },
       });
 
       return res.status(200).json({ columns });
