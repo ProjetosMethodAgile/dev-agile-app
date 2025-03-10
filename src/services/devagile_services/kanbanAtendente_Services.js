@@ -14,6 +14,7 @@ class KanbanAtendente_Services extends Services {
       const novoAtendente = await devAgile.KanbanAtendenteHelpDesk.create({
         id: uuid.v4(),
         usuario_id: dados.usuario_id,
+        empresa_id: dados.empresa_id,
       });
 
       // Cria a associação entre o atendente e o setor informado
@@ -50,6 +51,31 @@ class KanbanAtendente_Services extends Services {
         return { error: true, message: "Atendente não encontrado" };
       return { error: false, atendente };
     } catch (err) {
+      console.error("Erro ao consultar atendente:", err);
+      return { error: true, message: "Erro ao consultar atendente" };
+    }
+  }
+
+  async consultaTodosAtendentes_Services(id) {
+    try {
+      const atendentes = await devAgile[this.nomeModel].findAll({
+        where: { empresa_id: id },
+
+        include: [
+          {
+            model: devAgile["KanbanSetores"],
+            as: "Setores",
+            through: { attributes: [] },
+          },
+          {
+            model: devAgile.Usuario,
+            as: "UsuarioAtendente",
+          },
+        ],
+      });
+
+      return atendentes;
+    } catch (error) {
       console.error("Erro ao consultar atendente:", err);
       return { error: true, message: "Erro ao consultar atendente" };
     }
