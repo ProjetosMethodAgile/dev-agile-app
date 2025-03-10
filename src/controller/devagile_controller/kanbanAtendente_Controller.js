@@ -92,7 +92,7 @@ class KanbanAtendente_Controller {
         id
       );
 
-    return res.status(200).json({ atendentes: atendentes, error: false });
+    return res.status(200).json({ usuarios: atendentes, error: false });
   }
 }
 
