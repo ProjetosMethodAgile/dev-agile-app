@@ -25,11 +25,17 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "atendente_id",
         as: "Setores",
       });
+
+      KanbanAtendenteHelpDesk.belongsTo(models.Empresa, {
+        foreignKey: "empresa_id",
+        as: "AtendentesEmpresa",
+      });
     }
   }
   KanbanAtendenteHelpDesk.init(
     {
       usuario_id: DataTypes.UUID,
+      empresa_id: DataTypes.UUID,
     },
     {
       sequelize,

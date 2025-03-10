@@ -15,6 +15,17 @@ router.get("/api/helpdesk/atendentes/:id", checkTokenLogin, (req, res) =>
   kanbanAtendenteController.consultaAtendente_Controller(req, res)
 );
 
+// Rota para consultar um atendente pelo ID
+router.get(
+  "/api/helpdesk/atendentes/empresa/:id",
+  checkTokenLogin,
+  (req, res) =>
+    kanbanAtendenteController.consultaTodosAtendentesByEmpresaID_Controller(
+      req,
+      res
+    )
+);
+
 // Rota para deletar um atendente pelo ID
 router.delete("/api/helpdesk/atendentes/:id", checkTokenLogin, (req, res) =>
   kanbanAtendenteController.deletaAtendente_Controller(req, res)
