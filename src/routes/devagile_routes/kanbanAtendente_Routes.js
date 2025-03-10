@@ -15,12 +15,21 @@ router.get("/api/helpdesk/atendentes/:id", checkTokenLogin, (req, res) =>
   kanbanAtendenteController.consultaAtendente_Controller(req, res)
 );
 
-// Rota para consultar um atendente pelo ID
 router.get(
   "/api/helpdesk/atendentes/empresa/:id",
   checkTokenLogin,
   (req, res) =>
     kanbanAtendenteController.consultaTodosAtendentesByEmpresaID_Controller(
+      req,
+      res
+    )
+);
+
+router.get(
+  "/api/helpdesk/atendentes/usuario/empresa/:id",
+  checkTokenLogin,
+  (req, res) =>
+    kanbanAtendenteController.consultaUsuariosNaoAtendentesByEmpresaID_Controller(
       req,
       res
     )

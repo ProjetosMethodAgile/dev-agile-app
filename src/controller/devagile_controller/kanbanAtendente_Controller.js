@@ -75,6 +75,25 @@ class KanbanAtendente_Controller {
 
     return res.status(200).json({ atendentes: atendentes, error: false });
   }
+
+  async consultaUsuariosNaoAtendentesByEmpresaID_Controller(req, res) {
+    const { id } = req.params;
+
+    const empresa = await devAgile.Empresa.findOne({
+      where: { id: id },
+    });
+
+    if (!empresa) {
+      return res.status(500).json({ error: true, message: "empresa invalida" });
+    }
+
+    const atendentes =
+      await this.kanbanAtendenteService.consultaUsuariosNaoAtendentesByEmpresaID_Services(
+        id
+      );
+
+    return res.status(200).json({ atendentes: atendentes, error: false });
+  }
 }
 
 module.exports = KanbanAtendente_Controller;

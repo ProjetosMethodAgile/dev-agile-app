@@ -94,6 +94,47 @@ class KanbanAtendente_Services extends Services {
       return { error: true, message: "Erro ao deletar atendente" };
     }
   }
+
+  async consultaUsuariosNaoAtendentesByEmpresaID_Services(id) {
+    try {
+      const atendentes = await devAgile[this.nomeModel].findAll({
+        where: { empresa_id: id },
+
+        include: [
+          {
+            model: devAgile["KanbanSetores"],
+            as: "Setores",
+            through: { attributes: [] },
+          },
+          {
+            model: devAgile.Usuario,
+            as: "UsuarioAtendente",
+          },
+        ],
+      });
+      const usuarios = await devAgile.Usuario_Empresa.findAll({
+        where: { empresa_id: id },
+        include: [
+          {
+            model: devAgile.Usuario,
+            as: "usuario",
+          },
+        ],
+      });
+
+      const usuariosLivres = usuarios.filter((usuario) => {
+        // usuario.usuario.id: considerando que o objeto retornado do include tem a propriedade "usuario"
+        return !atendentes.some(
+          (atendente) => atendente.usuario_id === usuario.usuario_id
+        );
+      });
+
+      return usuariosLivres;
+    } catch (error) {
+      console.error("Erro ao consultar atendente:", error);
+      return { error: true, message: "Erro ao consultar atendente" };
+    }
+  }
 }
 
 module.exports = KanbanAtendente_Services;
