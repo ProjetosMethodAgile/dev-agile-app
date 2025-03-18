@@ -35,6 +35,28 @@ class KanbanSetores_Services extends Services {
     }
   }
 
+  async pegaSetorPorUsrAndEmp_Services(empid, usrid) {
+    try {
+      const empresa = await devAgile.Empresa.findOne({ where: { id: empid } });
+      const usuario = await devAgile.KanbanAtendenteHelpDesk.findOne({
+        where: { usuario_id: usrid },
+      });
+      if (!empresa || !usuario) {
+        return {
+          ok: false,
+          message:
+            "erro ao consultar dados, contate o administrador do sistema",
+        };
+      }
+      return { ok: true, usuario };
+    } catch (error) {
+      console.log(error);
+      return {
+        ok: false,
+        message: "erro ao consultar dados, contate o administrador do sistema",
+      };
+    }
+  }
   // Cria um novo setor
   async criaSetor_Services(dados) {
     try {
