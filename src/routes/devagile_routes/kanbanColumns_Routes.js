@@ -14,5 +14,8 @@ router.post("/api/helpdesk/column", (req, res) =>
 router.get("/api/helpdesk/columnsBySetor/:id", (req, res) =>
   kanbanColunm_controller.pegaTodasColumnsPorSetorID(req, res)
 );
+router.put("/api/helpdesk/columnsBySetor", checkTokenLogin, (req, res) =>
+  kanbanColunm_controller.atualizaOrdemColumnsPorSetorID_Controller(req, res)
+);
 
 module.exports = router;

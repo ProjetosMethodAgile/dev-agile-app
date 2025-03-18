@@ -17,12 +17,16 @@ class KanbanAtendente_Services extends Services {
         empresa_id: dados.empresa_id,
       });
 
-      // Cria a associação entre o atendente e o setor informado
-      await devAgile.KanbanAtendenteSetores.create({
-        id: uuid.v4(), // se sua tabela intermediária possuir a coluna id
-        atendente_id: novoAtendente.id,
-        setor_id: dados.setor_id,
-      });
+      // Itera pelo array de setores e cria as associações
+      await Promise.all(
+        dados.setor_id.map(async (id) => {
+          await devAgile.KanbanAtendenteSetores.create({
+            id: uuid.v4(), // se sua tabela intermediária possuir a coluna id
+            atendente_id: novoAtendente.id,
+            setor_id: id,
+          });
+        })
+      );
 
       return { error: false, atendente: novoAtendente };
     } catch (err) {

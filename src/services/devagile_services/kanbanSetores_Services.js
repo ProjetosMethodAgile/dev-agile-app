@@ -12,6 +12,21 @@ class KanbanSetores_Services extends Services {
     try {
       const setores = await devAgile[this.nomeModel].findAll({
         where: { empresa_id },
+        include: [
+          {
+            model: devAgile.KanbanAtendenteHelpDesk,
+            as: "Atendentes",
+            through: { attributes: [] }, // se quiser ocultar os dados da tabela de junção
+            attributes: ["id", "empresa_id"],
+            include: [
+              {
+                model: devAgile.Usuario,
+                as: "UsuarioAtendente", // certifique-se de que este alias corresponde à associação definida
+                attributes: ["nome"],
+              },
+            ],
+          },
+        ],
       });
       return { error: false, setores };
     } catch (err) {

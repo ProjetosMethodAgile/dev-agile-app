@@ -10,7 +10,10 @@ class KanbanAtendente_Controller {
   async criaAtendente_Controller(req, res) {
     const { usuario_id, setor_id, empresa_id } = req.body;
 
-    if (!usuario_id || !empresa_id || !setor_id) {
+    // Garante que setor_id seja um array
+    const setores = Array.isArray(setor_id) ? setor_id : [setor_id];
+
+    if (!usuario_id || !empresa_id || !setores || setores.length === 0) {
       return res
         .status(500)
         .json({ error: true, message: "preencha todos campos necessarios" });
@@ -26,7 +29,7 @@ class KanbanAtendente_Controller {
 
     const result = await this.kanbanAtendenteService.criaAtendente_Services({
       usuario_id,
-      setor_id,
+      setor_id: setores,
       empresa_id,
     });
     if (result.error) {

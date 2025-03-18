@@ -6,11 +6,8 @@ const router = Router();
 const kanbanSetoresController = new KanbanSetores_Controller();
 
 // Rota para buscar setores por empresa_id
-router.get(
-  "/api/helpdesk/setores/empresa/:empresa_id",
-
-  (req, res) =>
-    kanbanSetoresController.buscaSetoresPorEmpresa_Controller(req, res)
+router.get("/api/helpdesk/setores/empresa/:empresa_id", (req, res) =>
+  kanbanSetoresController.buscaSetoresPorEmpresa_Controller(req, res)
 );
 
 // Rota para cadastro de um novo setor

@@ -35,10 +35,11 @@ class KanbanColumn_Controller extends Controller {
       });
     }
 
-    const validaPosicao = await kanbanColumn_services.validaPosicaoColumn_Services(
-      posicao,
-      setor_id
-    );
+    const validaPosicao =
+      await kanbanColumn_services.validaPosicaoColumn_Services(
+        posicao,
+        setor_id
+      );
 
     if (validaPosicao.error) {
       return res.status(404).json({
@@ -81,12 +82,60 @@ class KanbanColumn_Controller extends Controller {
 
       // Se o setor existe, busca todas as colunas associadas a ele
       const columns = await devAgile.KanbanComlumns.findAll({
-        where: { setor_id:id },
+        where: { setor_id: id },
       });
 
       return res.status(200).json({ columns });
     } catch (error) {
       return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async atualizaOrdemColumnsPorSetorID_Controller(req, res) {
+    const { setor_id, setor_list } = req.body;
+    try {
+      const setor = await devAgile.KanbanSetores.findOne({
+        where: { id: setor_id },
+      });
+
+      if (!setor) {
+        return res.status(404).json({
+          message:
+            "Não foi possível atualizar, contate o administrador do sistema",
+          error: true,
+        });
+      }
+
+      if (!setor_list && !setor_list.length) {
+        return res.status(404).json({
+          message:
+            "Não foi possível atualizar, contate o administrador do sistema",
+          error: true,
+        });
+      }
+
+      const { message, error } =
+        await kanbanColumn_services.atualizaOrdemColumnsPorSetorID_Services(
+          setor_id,
+          setor_list
+        );
+      if (!error) {
+        return res.status(200).json({
+          message: { message },
+          error: false,
+        });
+      }
+      return res.status(404).json({
+        message: { message },
+        error: true,
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(404).json({
+        message:
+          "Não foi possível atualizar, contate o administrador do sistema",
+        error: true,
+      });
     }
   }
 }
