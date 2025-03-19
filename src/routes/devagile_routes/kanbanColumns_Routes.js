@@ -10,10 +10,18 @@ router.post("/api/helpdesk/column", (req, res) =>
   kanbanColunm_controller.cadastraColumn_Controller(req, res)
 );
 
-// Rota para buscar todas as colunas por setor
+// Rota para buscar todas as colunas por setor sem token
 router.get("/api/helpdesk/columnsBySetor/:id", (req, res) =>
   kanbanColunm_controller.pegaTodasColumnsPorSetorID(req, res)
 );
+
+router.get("/api/helpdesk/columns/setor/:set_id/empresa/:emp_id", (req, res) =>
+  kanbanColunm_controller.pegaTodasColumnsPorSetorEEmpresaID_Controller(
+    req,
+    res
+  )
+);
+
 router.put("/api/helpdesk/columnsBySetor", checkTokenLogin, (req, res) =>
   kanbanColunm_controller.atualizaOrdemColumnsPorSetorID_Controller(req, res)
 );

@@ -67,6 +67,36 @@ class KanbanColumn_Services extends Services {
       };
     }
   }
+
+  async pegaTodasColumnsPorSetorEEmpresaID_Services(setor_id, emp_id) {
+    try {
+      const empresa = await devAgile.Empresa.findOne({ where: { id: emp_id } });
+      const columnsList = await devAgile.KanbanComlumns.findAll({
+        where: { setor_id: setor_id },
+        include: [
+          {
+            model: devAgile.KanbanAcoes,
+            as: "ColumnAcoes",
+            through: { attributes: [] },
+          },
+        ],
+      });
+
+      if (!empresa || !columnsList.length) {
+        return {
+          ok: false,
+          message:
+            "erro ao consultar dados, contate o administrador do sistema",
+        };
+      }
+      return { ok: true, columnsList };
+    } catch (error) {
+      return {
+        ok: false,
+        message: "erro ao consultar dados, contate o administrador do sistema",
+      };
+    }
+  }
 }
 
 module.exports = KanbanColumn_Services;
