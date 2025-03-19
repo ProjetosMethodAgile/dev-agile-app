@@ -40,7 +40,23 @@ class KanbanSetores_Services extends Services {
       const empresa = await devAgile.Empresa.findOne({ where: { id: empid } });
       const usuario = await devAgile.KanbanAtendenteHelpDesk.findOne({
         where: { usuario_id: usrid },
+
+        attributes: ["id"],
+
+        include: [
+          {
+            model: devAgile.Usuario,
+            as: "UsuarioAtendente",
+            attributes: ["id", "nome", "email", "contato"],
+          },
+          {
+            model: devAgile["KanbanSetores"],
+            as: "Setores",
+            through: { attributes: [] },
+          },
+        ],
       });
+
       if (!empresa || !usuario) {
         return {
           ok: false,
@@ -48,7 +64,8 @@ class KanbanSetores_Services extends Services {
             "erro ao consultar dados, contate o administrador do sistema",
         };
       }
-      return { ok: true, usuario };
+
+      return { ok: true, atendente: usuario };
     } catch (error) {
       console.log(error);
       return {

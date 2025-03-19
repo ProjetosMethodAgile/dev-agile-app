@@ -39,7 +39,7 @@ class KanbanSetores_Controller {
           message: setoreslist.message,
         });
       }
-      return res.status(200).json({ setoreslist });
+      return res.status(200).json(setoreslist.atendente);
     } catch (error) {
       console.log(error);
       return res.status(404).json({
