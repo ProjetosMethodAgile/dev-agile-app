@@ -1,3 +1,4 @@
+const e = require("express");
 const { devAgile } = require("../../models");
 const KanbanColumn_Services = require("../../services/devagile_services/kanbanColumn_Services");
 const KanbanSetores_Services = require("../../services/devagile_services/kanbanSetores_Services");
@@ -88,6 +89,34 @@ class KanbanColumn_Controller extends Controller {
       return res.status(200).json({ columns });
     } catch (error) {
       return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async pegaTodasColumnsPorSetorEEmpresaID_Controller(req, res) {
+    try {
+      const { set_id, emp_id } = req.params;
+      if (!emp_id || !set_id) {
+        return res
+          .status(404)
+          .json({ error: true, message: "preencha os dados necessarios" });
+      }
+
+      const { columnsList, ok } =
+        await kanbanColumn_services.pegaTodasColumnsPorSetorEEmpresaID_Services(
+          set_id,
+          emp_id
+        );
+      if (!ok) {
+        return res
+          .status(404)
+          .json({ error: true, message: "erro ao buscar registros" });
+      }
+      return res.status(200).json(columnsList);
+    } catch (error) {
+      console.log(error);
+      return res
+        .status(404)
+        .json({ error: true, message: "erro ao buscar registros" });
     }
   }
 
