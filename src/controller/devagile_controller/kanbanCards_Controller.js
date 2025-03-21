@@ -10,6 +10,7 @@ const camposObrigatorios = [
   "src_img_capa",
   "titulo_chamado",
   "status",
+  "descricao",
 ];
 
 class KanbanCards_Controller extends Controller {
@@ -19,7 +20,8 @@ class KanbanCards_Controller extends Controller {
 
   async cadastraCard_Controller(req, res) {
     try {
-      const { setor_id, src_img_capa, titulo_chamado, status } = req.body;
+      const { setor_id, src_img_capa, titulo_chamado, status, descricao } =
+        req.body;
 
       // Verifica se os campos obrigatórios foram preenchidos
       const isTrue = await this.allowNull(req, res);
@@ -59,7 +61,8 @@ class KanbanCards_Controller extends Controller {
         column.id,
         src_img_capa,
         titulo_chamado,
-        status
+        status,
+        descricao
       );
 
       if (result.error) {

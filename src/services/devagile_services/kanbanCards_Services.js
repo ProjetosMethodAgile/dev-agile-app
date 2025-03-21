@@ -1,27 +1,67 @@
-const { devAgile } = require("../../models");
+const { devAgile, sequelizeDevAgileCli } = require("../../models");
 const { Op } = require("sequelize");
 const uuid = require("uuid");
 
 class KanbanCards_Services {
-  async cadastraCard_Services(column_id, src_img_capa, titulo_chamado, status) {
+  async cadastraCard_Services(
+    column_id,
+    src_img_capa,
+    titulo_chamado,
+    status,
+    descricao
+  ) {
+    const transaction = await sequelizeDevAgileCli.transaction();
+
     try {
-      // Cria o card com um novo UUID
-      const card = await devAgile.KanbanCards.create({
-        id: uuid.v4(),
-        column_id,
-        src_img_capa,
-        titulo_chamado,
-        status,
-      });
+      // Cria o card na tabela kanban_cards
+      const card = await devAgile.KanbanCards.create(
+        {
+          id: uuid.v4(),
+          column_id,
+          src_img_capa,
+          titulo_chamado,
+          status,
+        },
+        { transaction }
+      );
 
       if (!card) {
-        return {
-          error: true,
-          message: "Erro ao cadastrar card",
-        };
+        throw new Error("Erro ao cadastrar card");
       }
+
+      // Cria a sessão para o card na tabela kanban_sessoes
+      const sessao = await devAgile.KanbanSessoes.create(
+        {
+          id: uuid.v4(),
+          card_id: card.id,
+        },
+        { transaction }
+      );
+
+      if (!sessao) {
+        throw new Error("Erro ao cadastrar sessão do card");
+      }
+
+      // Cria a mensagem da sessão na tabela kanban_sessoes_messages
+      const message = await devAgile.KanbanSessoesMessages.create(
+        {
+          id: uuid.v4(),
+          sessao_id: sessao.id,
+          content_msg: descricao,
+          atendente_id: null, // não alimentado pelo cliente
+          cliente_id: null, // não alimentado, pois é criado externamente
+        },
+        { transaction }
+      );
+
+      if (!message) {
+        throw new Error("Erro ao cadastrar mensagem da sessão");
+      }
+
+      await transaction.commit();
       return { card, error: false, message: "Cadastro realizado com sucesso" };
     } catch (error) {
+      await transaction.rollback();
       return {
         error: true,
         message: "Erro ao cadastrar card: " + error.message,
