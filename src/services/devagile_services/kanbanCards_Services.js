@@ -1,6 +1,7 @@
 const { devAgile, sequelizeDevAgileCli } = require("../../models");
 const { Op } = require("sequelize");
 const uuid = require("uuid");
+const socket = require("../../src/socket.js"); // importa o módulo do socket
 
 class KanbanCards_Services {
   async cadastraCard_Services(
@@ -11,7 +12,6 @@ class KanbanCards_Services {
     descricao
   ) {
     const transaction = await sequelizeDevAgileCli.transaction();
-
     try {
       // Cria o card na tabela kanban_cards
       const card = await devAgile.KanbanCards.create(
@@ -24,10 +24,7 @@ class KanbanCards_Services {
         },
         { transaction }
       );
-
-      if (!card) {
-        throw new Error("Erro ao cadastrar card");
-      }
+      if (!card) throw new Error("Erro ao cadastrar card");
 
       // Cria a sessão para o card na tabela kanban_sessoes
       const sessao = await devAgile.KanbanSessoes.create(
@@ -37,10 +34,7 @@ class KanbanCards_Services {
         },
         { transaction }
       );
-
-      if (!sessao) {
-        throw new Error("Erro ao cadastrar sessão do card");
-      }
+      if (!sessao) throw new Error("Erro ao cadastrar sessão do card");
 
       // Cria a mensagem da sessão na tabela kanban_sessoes_messages
       const message = await devAgile.KanbanSessoesMessages.create(
@@ -48,17 +42,18 @@ class KanbanCards_Services {
           id: uuid.v4(),
           sessao_id: sessao.id,
           content_msg: descricao,
-          atendente_id: null, // não alimentado pelo cliente
-          cliente_id: null, // não alimentado, pois é criado externamente
+          atendente_id: null,
+          cliente_id: null,
         },
         { transaction }
       );
-
-      if (!message) {
-        throw new Error("Erro ao cadastrar mensagem da sessão");
-      }
+      if (!message) throw new Error("Erro ao cadastrar mensagem da sessão");
 
       await transaction.commit();
+
+      // Emite o evento informando que um card foi criado
+      socket.getIO().emit("cardCreated", { card });
+
       return { card, error: false, message: "Cadastro realizado com sucesso" };
     } catch (error) {
       await transaction.rollback();
@@ -76,17 +71,13 @@ class KanbanCards_Services {
       const card = await devAgile.KanbanCards.findOne({
         where: { id: card_id },
       });
-      if (!card) {
-        throw new Error("Card não encontrado");
-      }
+      if (!card) throw new Error("Card não encontrado");
 
       // (Opcional) Verifica se a nova coluna existe
       const column = await devAgile.KanbanComlumns.findOne({
         where: { id: new_column_id },
       });
-      if (!column) {
-        throw new Error("Coluna não encontrada");
-      }
+      if (!column) throw new Error("Coluna não encontrada");
 
       // Atualiza o campo column_id do card
       await devAgile.KanbanCards.update(
@@ -95,6 +86,10 @@ class KanbanCards_Services {
       );
 
       await transaction.commit();
+
+      // Emite o evento informando que o card foi atualizado/movido
+      socket.getIO().emit("cardUpdated", { card_id, new_column_id });
+
       return { error: false, message: "Coluna do card atualizada com sucesso" };
     } catch (error) {
       await transaction.rollback();
@@ -107,29 +102,15 @@ class KanbanCards_Services {
 
   async pegaCardsPorSetorID_Services(setor_id) {
     try {
-      // Busca todas as colunas associadas ao setor
       const columns = await devAgile.KanbanComlumns.findAll({
         where: { setor_id },
       });
-
-      if (!columns || !columns.length) {
-        return [];
-      }
-
-      // Extrai os IDs das colunas encontradas
+      if (!columns || !columns.length) return [];
       const columnIds = columns.map((column) => column.id);
-
-      // Busca todos os cards cujos "column_id" estão presentes na lista de colunas
       const cards = await devAgile.KanbanCards.findAll({
         where: { column_id: { [Op.in]: columnIds } },
-        include: [
-          {
-            model: devAgile.KanbanComlumns,
-            as: "ColumnsCard",
-          },
-        ],
+        include: [{ model: devAgile.KanbanComlumns, as: "ColumnsCard" }],
       });
-
       return cards;
     } catch (error) {
       throw new Error("Erro ao buscar cards: " + error.message);
