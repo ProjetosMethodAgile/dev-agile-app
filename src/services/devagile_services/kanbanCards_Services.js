@@ -1,7 +1,7 @@
 const { devAgile, sequelizeDevAgileCli } = require("../../models");
 const { Op } = require("sequelize");
 const uuid = require("uuid");
-const socket = require("../../src/socket.js"); // importa o módulo do socket
+const socket = require("../../socket.js");
 
 class KanbanCards_Services {
   async cadastraCard_Services(
