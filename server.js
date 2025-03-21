@@ -3,7 +3,7 @@ require("dotenv").config();
 const app = require("./src/app.js");
 const https = require("https");
 const fs = require("fs");
-const { init } = require("./src/socket.js");
+const { initWsServer } = require("./src/websocket.js");
 
 const PORT = 3001;
 const httpsOptions = {
@@ -13,8 +13,8 @@ const httpsOptions = {
 
 const server = https.createServer(httpsOptions, app);
 
-// Inicializa o Socket.IO
-init(server);
+// Inicializa o servidor WebSocket
+initWsServer(server);
 
 server.listen(PORT, () => {
   console.log("Servidor de aplicação ligado na porta " + PORT);
