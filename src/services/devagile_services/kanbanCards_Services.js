@@ -69,6 +69,42 @@ class KanbanCards_Services {
     }
   }
 
+  async atualizaColumnCard_Services(card_id, new_column_id) {
+    const transaction = await sequelizeDevAgileCli.transaction();
+    try {
+      // Verifica se o card existe
+      const card = await devAgile.KanbanCards.findOne({
+        where: { id: card_id },
+      });
+      if (!card) {
+        throw new Error("Card não encontrado");
+      }
+
+      // (Opcional) Verifica se a nova coluna existe
+      const column = await devAgile.KanbanComlumns.findOne({
+        where: { id: new_column_id },
+      });
+      if (!column) {
+        throw new Error("Coluna não encontrada");
+      }
+
+      // Atualiza o campo column_id do card
+      await devAgile.KanbanCards.update(
+        { column_id: new_column_id },
+        { where: { id: card_id }, transaction }
+      );
+
+      await transaction.commit();
+      return { error: false, message: "Coluna do card atualizada com sucesso" };
+    } catch (error) {
+      await transaction.rollback();
+      return {
+        error: true,
+        message: "Erro ao atualizar coluna do card: " + error.message,
+      };
+    }
+  }
+
   async pegaCardsPorSetorID_Services(setor_id) {
     try {
       // Busca todas as colunas associadas ao setor
