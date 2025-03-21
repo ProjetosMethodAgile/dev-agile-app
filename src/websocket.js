@@ -1,23 +1,24 @@
 // src/websocket.js
 const WebSocket = require("ws");
 
-let wss; // Referência ao WebSocket.Server
-let connectedClients = []; // Armazena as conexões ativas
+let wss = null;
+let connectedClients = [];
 
+/**
+ * Inicializa o servidor WebSocket usando o servidor HTTPS e define o path.
+ */
 function initWsServer(server) {
-  wss = new WebSocket.Server({ server });
+  wss = new WebSocket.Server({ server, path: "/api/socket" });
 
   wss.on("connection", (ws) => {
     console.log("Novo cliente WebSocket conectado");
     connectedClients.push(ws);
 
-    // Quando o cliente enviar alguma mensagem
-    ws.on("message", (msg) => {
-      console.log("Mensagem recebida do cliente:", msg);
-      // Se quiser tratar mensagens específicas, faça aqui
+    ws.on("message", (message) => {
+      console.log("Mensagem recebida do cliente:", message);
+      // Aqui você pode tratar mensagens recebidas do cliente
     });
 
-    // Quando o cliente se desconectar
     ws.on("close", () => {
       console.log("Cliente WebSocket desconectado");
       connectedClients = connectedClients.filter((c) => c !== ws);
@@ -25,10 +26,11 @@ function initWsServer(server) {
   });
 }
 
-// Envia data (objeto) para todos os clientes conectados
+/**
+ * Envia uma mensagem para todos os clientes conectados.
+ */
 function broadcast(data) {
   if (!wss) return;
-
   const payload = JSON.stringify(data);
   connectedClients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {

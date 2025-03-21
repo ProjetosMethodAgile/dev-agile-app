@@ -1,8 +1,8 @@
-// Exemplo: index.js ou server.js
+// server.js
 require("dotenv").config();
-const app = require("./src/app.js");
-const https = require("https");
 const fs = require("fs");
+const https = require("https");
+const app = require("./src/app.js");
 const { initWsServer } = require("./src/websocket.js");
 
 const PORT = 3001;
@@ -13,9 +13,9 @@ const httpsOptions = {
 
 const server = https.createServer(httpsOptions, app);
 
-// Inicializa o servidor WebSocket
+// Inicializa o WebSocket com path '/api/socket'
 initWsServer(server);
 
 server.listen(PORT, () => {
-  console.log("Servidor de aplicação ligado na porta " + PORT);
+  console.log(`Servidor HTTPS rodando na porta ${PORT}`);
 });
