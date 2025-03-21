@@ -15,4 +15,9 @@ router.post("/api/helpdesk/card", (req, res) =>
   kanbanCards_controller.cadastraCard_Controller(req, res)
 );
 
+// Rota para atualizar a column_id do card
+router.put("/api/helpdesk/card/updateColumn", checkTokenLogin, (req, res) =>
+  kanbanCards_controller.atualizaColumnCard_Controller(req, res)
+);
+
 module.exports = router;
