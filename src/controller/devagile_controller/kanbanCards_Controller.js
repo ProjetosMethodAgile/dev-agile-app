@@ -62,7 +62,8 @@ class KanbanCards_Controller extends Controller {
         src_img_capa,
         titulo_chamado,
         status,
-        descricao
+        descricao,
+        setor_id
       );
 
       if (result.error) {

@@ -10,7 +10,8 @@ class KanbanCards_Services {
     src_img_capa,
     titulo_chamado,
     status,
-    descricao
+    descricao,
+    setor_id
   ) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
@@ -51,9 +52,9 @@ class KanbanCards_Services {
       if (!message) throw new Error("Erro ao cadastrar mensagem da sessão");
 
       await transaction.commit();
+      console.log(`cardCreated-${setor_id}`);
 
-      // Envia evento "cardCreated" para todos os clientes
-      ws.broadcast({ type: "cardCreated", card });
+      ws.broadcast({ type: `cardCreated-${setor_id}`, card });
 
       return { card, error: false, message: "Cadastro realizado com sucesso" };
     } catch (error) {
