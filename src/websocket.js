@@ -8,7 +8,7 @@ let connectedClients = [];
  * Inicializa o servidor WebSocket usando o servidor HTTPS e define o path.
  */
 function initWsServer(server) {
-  wss = new WebSocket.Server({ server, path: "/api/socket" });
+  wss = new WebSocket.Server({ server, path: "/socket" });
 
   wss.on("connection", (ws) => {
     console.log("Novo cliente WebSocket conectado");
@@ -16,7 +16,6 @@ function initWsServer(server) {
 
     ws.on("message", (message) => {
       console.log("Mensagem recebida do cliente:", message);
-      // Aqui você pode tratar mensagens recebidas do cliente
     });
 
     ws.on("close", () => {
