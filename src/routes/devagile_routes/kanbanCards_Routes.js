@@ -10,7 +10,7 @@ router.get("/api/helpdesk/cardsBySetor/:id", checkTokenLogin, (req, res) =>
   kanbanCards_controller.pegaCardsPorSetorID(req, res)
 );
 
-router.get("/api/helpdesk/card/:card_id", (req, res) =>
+router.get("/api/helpdesk/card/:card_id", checkTokenLogin, (req, res) =>
   kanbanCards_controller.pegaCardPorID(req, res)
 );
 
