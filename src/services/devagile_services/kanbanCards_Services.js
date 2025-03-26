@@ -116,6 +116,75 @@ class KanbanCards_Services {
       throw new Error("Erro ao buscar cards: " + error.message);
     }
   }
+
+  async pegaCardPorID_Services(card_id) {
+    try {
+      const card = await devAgile.KanbanCards.findOne({
+        where: { id: card_id },
+        include: [
+          {
+            model: devAgile.KanbanComlumns,
+            as: "ColumnsCard",
+            attributes: ["nome"],
+          },
+          {
+            model: devAgile.KanbanSessoes,
+            as: "CardSessao",
+            attributes: ["id"],
+            include: [
+              {
+                model: devAgile.KanbanAtendenteHelpDesk,
+                as: "SessaoAtendenteID",
+                attributes: [],
+                through: {
+                  attributes: [
+                    "visualizacao_atendente",
+                    "atendente_id",
+                    "createdAt",
+                  ],
+                },
+              },
+              {
+                model: devAgile.KanbanSessoesMessages,
+                as: "MessageSessao",
+                attributes: [
+                  "atendente_id",
+                  "cliente_id",
+                  "content_msg",
+                  "createdAt",
+                  "updatedAt",
+                ],
+                order: [["createdAt", "ASC"]],
+                include: [
+                  {
+                    model: devAgile.Usuario,
+                    as: "ClienteSessao",
+                    attributes: ["nome"],
+                  },
+                  {
+                    model: devAgile.KanbanAtendenteHelpDesk,
+                    as: "AtendenteMessage",
+                    attributes: ["id"],
+                    include: [
+                      {
+                        model: devAgile.Usuario,
+                        as: "UsuarioAtendente",
+                        attributes: ["nome"],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      return card;
+    } catch (error) {
+      throw new Error("Erro ao buscar cards: " + error.message);
+    }
+  }
 }
 
 module.exports = KanbanCards_Services;

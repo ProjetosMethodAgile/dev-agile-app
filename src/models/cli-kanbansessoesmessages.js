@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       });
       KanbanSessoesMessages.belongsTo(models.Usuario, {
         foreignKey: "cliente_id",
-        as: "MessageCliente",
+        as: "ClienteSessao",
       });
     }
   }
