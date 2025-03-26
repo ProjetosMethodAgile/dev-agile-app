@@ -100,6 +100,19 @@ class KanbanCards_Controller extends Controller {
     }
   }
 
+  async pegaCardPorID(req, res) {
+    try {
+      const { card_id } = req.params;
+      const card = await kanbanCardsService.pegaCardPorID_Services(card_id);
+
+      if (!card) {
+        return res.status(404).json({ error: "erro ao buscar dados" });
+      }
+      return res.status(200).json(card);
+    } catch (error) {
+      return res.status(500).json({ error: "erro ao buscar dados" });
+    }
+  }
   async atualizaColumnCard_Controller(req, res) {
     try {
       const { card_id, new_column_id } = req.body;
