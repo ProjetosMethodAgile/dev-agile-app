@@ -1,4 +1,3 @@
-// services/devagile_services/KanbanCards_Services.js
 const { devAgile, sequelizeDevAgileCli } = require("../../models");
 const { Op } = require("sequelize");
 const uuid = require("uuid");
@@ -53,9 +52,7 @@ class KanbanCards_Services {
 
       await transaction.commit();
       console.log(`cardCreated-${setor_id}`);
-
       ws.broadcast({ type: `cardCreated-${setor_id}`, card });
-
       return { card, error: false, message: "Cadastro realizado com sucesso" };
     } catch (error) {
       await transaction.rollback();
@@ -73,22 +70,16 @@ class KanbanCards_Services {
         where: { id: card_id },
       });
       if (!card) throw new Error("Card não encontrado");
-
       const column = await devAgile.KanbanComlumns.findOne({
         where: { id: new_column_id },
       });
       if (!column) throw new Error("Coluna não encontrada");
-
       await devAgile.KanbanCards.update(
         { column_id: new_column_id },
         { where: { id: card_id }, transaction }
       );
-
       await transaction.commit();
-
-      // Envia evento "cardUpdated" para todos os clientes
       ws.broadcast({ type: "cardUpdated", card_id, new_column_id });
-
       return { error: false, message: "Coluna do card atualizada com sucesso" };
     } catch (error) {
       await transaction.rollback();
@@ -106,7 +97,6 @@ class KanbanCards_Services {
       });
       if (!columns || !columns.length) return [];
       const columnIds = columns.map((c) => c.id);
-
       const cards = await devAgile.KanbanCards.findAll({
         where: { column_id: { [Op.in]: columnIds } },
         include: [{ model: devAgile.KanbanComlumns, as: "ColumnsCard" }],
@@ -179,7 +169,6 @@ class KanbanCards_Services {
           },
         ],
       });
-
       return card;
     } catch (error) {
       throw new Error("Erro ao buscar cards: " + error.message);

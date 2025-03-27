@@ -25,10 +25,12 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
+
   KanbanSetores.init(
     {
       empresa_id: DataTypes.UUID,
       nome: DataTypes.STRING,
+      email_setor: DataTypes.STRING,
     },
     {
       sequelize,

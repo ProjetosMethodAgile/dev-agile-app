@@ -74,6 +74,7 @@ class KanbanSetores_Services extends Services {
       };
     }
   }
+
   // Cria um novo setor
   async criaSetor_Services(dados) {
     try {
@@ -81,6 +82,7 @@ class KanbanSetores_Services extends Services {
         id: uuid.v4(),
         empresa_id: dados.empresa_id, // vincula o setor à empresa
         nome: dados.nome,
+        email_setor: dados.email_setor, // <-- adicionando a coluna
       });
       return { error: false, setor: novoSetor };
     } catch (err) {
