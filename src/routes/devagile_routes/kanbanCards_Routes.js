@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const checkTokenLogin = require("../../middlewares/checkTokenLogin.js");
-const KanbanCards_Controller = require("../../controller/devagile_controller/KanbanCards_Controller.js");
+const KanbanCards_Controller = require("../../controller/devagile_controller/kanbanCards_Controller.js");
 
 const router = Router();
 const kanbanCards_controller = new KanbanCards_Controller();
