@@ -18,6 +18,10 @@ route.get("/api/usuario/:id", checkTokenLogin, (req, res) =>
   usuario_controller.pegaUsuarioPorId_Controller(req, res)
 );
 
+route.get("/api/usuarios/empresa/:id", checkTokenLogin, (req, res) =>
+  usuario_controller.pegaUsuariosPorEmpId_Controller(req, res)
+);
+
 route.post("/api/usuario/login", (req, res) => {
   usuario_controller.loginUsuario_Controller(req, res);
 });

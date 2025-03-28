@@ -1,6 +1,6 @@
 const Services = require("../Services.js");
 const { devAgile, sequelizeDevAgileCli } = require("../../models/index.js");
-const { Op } = require("sequelize");
+const { Op, where } = require("sequelize");
 const { validate: isUuid } = require("uuid");
 const uuid = require("uuid");
 const bcrypt = require("bcrypt");
@@ -420,6 +420,120 @@ class Usuario_Services extends Services {
         updatedAt: usuario.updatedAt,
       },
     };
+  }
+
+  async pegaUsuariosPorEmpId_Services(id) {
+    try {
+      const usuarios = await devAgile.Usuario.findAll({
+        attributes: [
+          "id",
+          "nome",
+          "email",
+          "contato",
+          "createdAt",
+          "updatedAt",
+        ],
+        include: [
+          {
+            model: devAgile.Empresa,
+            as: "empresas",
+            attributes: ["id", "nome", "cnpj"],
+            through: { attributes: [] },
+            where:{id}
+          },
+          {
+            model: devAgile.Role,
+            as: "usuario_roles",
+            attributes: ["id", "nome", "descricao"],
+            through: { attributes: [] },
+          },
+          {
+            model: devAgile.Permissao,
+            as: "usuario_permissoes",
+            attributes: ["id", "nome", "descricao"],
+            through: { attributes: [] },
+            include: [
+              {
+                model: devAgile.UserPermissionAccess,
+                as: "user_permissions_access",
+                attributes: [
+                  "can_create",
+                  "can_read",
+                  "can_update",
+                  "can_delete",
+                ],
+              },
+            ],
+          },
+
+          {
+            model: devAgile.UserAcaoTela,
+            as: "user_acoes_tela",
+            include: [
+              {
+                model: devAgile.AcaoTela,
+                as: "acao_tela",
+                attributes: ["id", "nome", "descricao"],
+              },
+            ],
+          },
+        ],
+      });
+
+      if (!usuarios.length) {
+        return { status: false, usuarios: [] };
+      }
+
+      // Formata cada usuário
+      const formattedUsuarios = usuarios.map((usuario) => {
+        const permissoesPorTela = usuario.usuario_permissoes.reduce(
+          (acc, permissao) => {
+            const telaNome = permissao.nome;
+            if (!acc[telaNome]) {
+              acc[telaNome] = {
+                tela: telaNome,
+                permissoes: [],
+              };
+            }
+            const crudPermissions = permissao.user_permissions_access[0];
+            acc[telaNome].permissoes.push({
+              permissao_id: permissao.id,
+              can_create: crudPermissions?.can_create || false,
+              can_read: crudPermissions?.can_read || false,
+              can_update: crudPermissions?.can_update || false,
+              can_delete: crudPermissions?.can_delete || false,
+            });
+            return acc;
+          },
+          {}
+        );
+
+        // Extrai as ações unitárias (por exemplo, apenas os IDs)
+        const acoesTela = usuario.user_acoes_tela.map(
+          (registro) => registro.acao_tela.id
+        );
+
+        return {
+          id: usuario.id,
+          nome: usuario.nome,
+          email: usuario.email,
+          contato: usuario.contato,
+          empresa: usuario.empresas,
+          usuario_roles: usuario.usuario_roles,
+          usuario_permissoes_por_tela: Object.values(permissoesPorTela),
+          acoesTela, // Retorna os IDs das ações unitárias vinculadas
+          createdAt: usuario.createdAt,
+          updatedAt: usuario.updatedAt,
+        };
+      });
+
+      return { status: true, usuarios: formattedUsuarios };
+    } catch (error) {
+      console.log(error);
+      throw new Error("Erro ao buscar usuários");
+    }
+
+
   }
 
   async atualizaUsuario_Services(userId, data) {
