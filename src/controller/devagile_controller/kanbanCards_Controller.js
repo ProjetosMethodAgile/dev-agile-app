@@ -1,10 +1,13 @@
 const { devAgile } = require("../../models");
 const KanbanCards_Services = require("../../services/devagile_services/kanbanCards_Services");
 const KanbanSetores_Services = require("../../services/devagile_services/kanbanSetores_Services");
+const Usuario_Services = require("../../services/devagile_services/Usuario_Services");
+
 const Controller = require("../Controller");
 const { sendEmail } = require("../../utils/sendEmail");
 
 const kanbanCardsService = new KanbanCards_Services();
+const usuarioServices = new Usuario_Services();
 const kanbanSetoresService = new KanbanSetores_Services();
 const camposObrigatorios = [
   "setor_id",
@@ -100,6 +103,119 @@ class KanbanCards_Controller extends Controller {
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
           // Você pode optar por tratar o erro ou seguir mesmo que o email falhe
+        }
+      }
+
+      return res.status(200).json({
+        card: result.card,
+        message: result.message,
+        error: false,
+      });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  // Novo método para cadastro com usuário autenticado
+  async cadastraCardAuth_Controller(req, res) {
+    try {
+      const {
+        setor_id,
+        src_img_capa,
+        titulo_chamado,
+        status,
+        descricao,
+        usuario_id,
+      } = req.body;
+
+      const usuario = await usuarioServices.pegaUsuarioPorId_Services(
+        usuario_id
+      );
+
+      const user_email = usuario.usuario.email;
+
+      if (!usuario_id || user_email) {
+        return res.status(400).json({
+          error: true,
+          message: "Usuário não autenticado ou sem email.",
+        });
+      }
+
+      // Verifica se os campos obrigatórios foram preenchidos
+      const isTrue = await this.allowNull(req, res);
+      if (!isTrue.status) {
+        return res.status(500).json({
+          message: "Preencha todos os campos necessários",
+          campos: isTrue.campos,
+          error: true,
+        });
+      }
+
+      // Valida se o setor existe
+      const setorResult = await kanbanSetoresService.pegaSetorPorId_Services(
+        setor_id
+      );
+      if (!setorResult || !setorResult.setor) {
+        return res.status(404).json({
+          message: "Setor não encontrado",
+          error: true,
+        });
+      }
+      const setor = setorResult.setor;
+
+      // Busca a coluna do setor com posição "0"
+      const column = await devAgile.KanbanComlumns.findOne({
+        where: { setor_id, posicao: "0" },
+      });
+      if (!column) {
+        return res.status(404).json({
+          message: "Coluna de posição 0 não encontrada para o setor informado",
+          error: true,
+        });
+      }
+
+      // Cria o card utilizando o id da coluna encontrada, passando o usuario_id
+      const result = await kanbanCardsService.cadastraCardAuth_Services(
+        column.id,
+        src_img_capa,
+        titulo_chamado,
+        status,
+        descricao,
+        setor_id,
+        usuario_id
+      );
+      if (result.error) {
+        return res.status(404).json({
+          message: result.message,
+          error: true,
+        });
+      }
+
+      // Envia email via AWS SES: destinatário principal é o usuário autenticado e CC é o email do setor
+      if (usuarioEmail && isValidEmail(usuarioEmail)) {
+        const emailSubject = `Novo card criado: ${titulo_chamado} [Msg #${result.createdMessage.id}]`;
+        const emailBody = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
+        try {
+          const emailResponse = await sendEmail({
+            to: usuarioEmail,
+            cc: setor.email_setor, // email do setor em cópia
+            subject: emailSubject,
+            text: emailBody,
+          });
+          // Atualiza o registro da mensagem com o MessageId do SES
+          if (result.createdMessage) {
+            const updatedResult =
+              await kanbanCardsService.atualizaEmailData_Services(
+                result.createdMessage.id,
+                { message_id: emailResponse.MessageId }
+              );
+            console.log(
+              "Mensagem atualizada com MessageId do SES:",
+              updatedResult.updatedMessage
+            );
+          }
+        } catch (emailError) {
+          console.error("Erro ao enviar email via SES:", emailError);
         }
       }
 

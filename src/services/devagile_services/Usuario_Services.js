@@ -224,6 +224,72 @@ class Usuario_Services extends Services {
     }
   }
 
+  async cadastraCardAuth_Services(
+    column_id,
+    src_img_capa,
+    titulo_chamado,
+    status,
+    descricao,
+    setor_id,
+    usuario_id
+  ) {
+    const transaction = await sequelizeDevAgileCli.transaction();
+    try {
+      // Cria o card
+      const card = await devAgile.KanbanCards.create(
+        {
+          id: uuid.v4(),
+          column_id,
+          src_img_capa,
+          titulo_chamado,
+          status,
+        },
+        { transaction }
+      );
+      if (!card) throw new Error("Erro ao cadastrar card");
+
+      // Cria a sessão para o card
+      const sessao = await devAgile.KanbanSessoes.create(
+        {
+          id: uuid.v4(),
+          card_id: card.id,
+        },
+        { transaction }
+      );
+      if (!sessao) throw new Error("Erro ao cadastrar sessão do card");
+
+      // Cria a mensagem da sessão, associando o usuário (cliente_id)
+      const message = await devAgile.KanbanSessoesMessages.create(
+        {
+          id: uuid.v4(),
+          sessao_id: sessao.id,
+          content_msg: descricao,
+          atendente_id: null,
+          cliente_id: usuario_id, // registra o usuário autenticado
+          message_id: null,
+        },
+        { transaction }
+      );
+      if (!message) throw new Error("Erro ao cadastrar mensagem da sessão");
+
+      await transaction.commit();
+      console.log(`cardCreated-${setor_id}`);
+      ws.broadcast({ type: `cardCreated-${setor_id}`, card });
+      return {
+        card,
+        error: false,
+        message: "Cadastro realizado com sucesso",
+        createdMessage: message,
+      };
+    } catch (error) {
+      await transaction.rollback();
+      return {
+        error: true,
+        message: "Erro ao cadastrar card: " + error.message,
+      };
+    }
+  }
+
   async pegaUsuarioPorEmail_Services(email) {
     const retorno = await devAgile.Usuario.findOne({
       where: { email },

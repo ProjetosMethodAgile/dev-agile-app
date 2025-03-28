@@ -30,4 +30,9 @@ router.post("/api/helpdesk/email/update", (req, res) =>
   kanbanCards_controller.atualizaEmailData_Controller(req, res)
 );
 
+// NOVA ROTA: Cadastro de card por usuário autenticado
+router.post("/api/helpdesk/card/auth", checkTokenLogin, (req, res) =>
+  kanbanCards_controller.cadastraCardAuth_Controller(req, res)
+);
+
 module.exports = router;
