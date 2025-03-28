@@ -75,7 +75,7 @@ class KanbanCards_Controller extends Controller {
 
       // Envia email via AWS SES se o setor possuir um email válido
       if (setor.email_setor && isValidEmail(setor.email_setor)) {
-        const emailSubject = `Novo card criado: ${titulo_chamado}`;
+        const emailSubject = `Novo card criado: ${titulo_chamado} [Msg #${result.createdMessage.id}] `;
         const emailBody = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
         try {
           // Envia o email e captura a resposta do SES
