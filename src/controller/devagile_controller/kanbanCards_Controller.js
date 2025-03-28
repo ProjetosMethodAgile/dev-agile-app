@@ -79,10 +79,10 @@ class KanbanCards_Controller extends Controller {
             subject: emailSubject,
             text: emailBody,
             customHeaders: {
-              "X-MyApp-MessageId": result.createdMessage.id,
+              "X-MyApp-MessageId": emailResponse.MessageId,
             },
           });
-          console.log("Email enviado. SES response:", emailResponse);
+          console.log("Email enviado. SES response:", emailResponse.MessageId);
 
           // Aqui você pode atualizar o registro com o MessageId retornado pelo SES,
           // caso deseje que o valor salvo no banco seja o MessageId do SES.
@@ -198,7 +198,7 @@ class KanbanCards_Controller extends Controller {
             );
           console.log(
             "Mensagem atualizada com MessageId do SES:",
-            updatedResult.updatedMessage
+            emailResponse
           );
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
@@ -260,6 +260,95 @@ class KanbanCards_Controller extends Controller {
       });
     } catch (error) {
       return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async replyMessage_Controller(req, res) {
+    try {
+      /*
+        Exemplo de body esperado:
+        {
+          "original_message_id": "uuid-da-mensagem",
+          "content_msg": "Texto da resposta",
+          // se quiser, pode passar "usuario_id" ou "atendente_id"
+          // ou deduzir do token (req.user)
+        }
+      */
+      const { original_message_id, content_msg, atendente_id, cliente_id } =
+        req.body;
+      if (!original_message_id || !content_msg) {
+        return res.status(400).json({
+          error: true,
+          message:
+            "Dados insuficientes (original_message_id e content_msg são obrigatórios).",
+        });
+      }
+
+      // 1. Localiza a mensagem original
+      const originalMsg = await kanbanCardsService.pegaMensagemPorId_Services(
+        original_message_id
+      );
+      if (!originalMsg) {
+        return res.status(404).json({
+          error: true,
+          message: "Mensagem original não encontrada",
+        });
+      }
+
+      // 3. Cria a nova mensagem (in_reply_to = original_message_id)
+      const newMessage = await kanbanCardsService.replyMessage_Services({
+        originalMsg,
+        content_msg,
+        atendente_id,
+        cliente_id,
+      });
+
+      if (newMessage.error) {
+        return res
+          .status(400)
+          .json({ error: true, message: newMessage.message });
+      }
+
+      //se o foi o atendente que mandou a menssagem, envia para o email cliente, caso contrario manda para o atendente
+      if (atendente_id) {
+        await sendEmailRaw({
+          to: originalMsg.from_email,
+          subject: `Re: Chamado #${originalMsg.sessao_id}`,
+          text: `Atendente respondeu: ${content_msg}`,
+          // Se quiser HTML
+          // html: `<p>Atendente respondeu: ${content_msg}</p>`,
+          // Se a mensagem original tem "message_id" = <xxx@ses.amazonaws.com>
+          inReplyTo: originalMsg.message_id,
+          references: `<${originalMsg.message_id}>`,
+          customHeaders: {
+            "X-MyApp-MessageId": newMessage.data.id,
+          },
+        });
+      } else {
+        // se foi o usuario que mandou a mensagem, envia para o atendente / setor
+        await sendEmailRaw({
+          to: originalMsg.from_email,
+          subject: `Re: Chamado #${originalMsg.sessao_id}`,
+          text: `Usuario respondeu: ${content_msg}`,
+          // Se quiser HTML
+          // html: `<p>Atendente respondeu: ${content_msg}</p>`,
+          // Se a mensagem original tem "message_id" = <xxx@ses.amazonaws.com>
+          inReplyTo: originalMsg.message_id,
+          references: `<${originalMsg.message_id}>`,
+          customHeaders: {
+            "X-MyApp-MessageId": newMessage.data.id,
+          },
+        });
+      }
+
+      return res.status(200).json({
+        error: false,
+        message: "Resposta criada com sucesso",
+        newMessage: newMessage.data,
+      });
+    } catch (error) {
+      console.error("Erro ao responder mensagem:", error);
+      return res.status(500).json({ error: true, message: error.message });
     }
   }
 
