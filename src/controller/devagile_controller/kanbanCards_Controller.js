@@ -78,15 +78,28 @@ class KanbanCards_Controller extends Controller {
         const emailSubject = `Novo card criado: ${titulo_chamado}`;
         const emailBody = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
         try {
-          await sendEmail({
+          // Envia o email e captura a resposta do SES
+          const emailResponse = await sendEmail({
             to: process.env.MAIN_EMAIL,
             cc: setor.email_setor,
             subject: emailSubject,
             text: emailBody,
           });
+          // Atualiza o registro da mensagem com o MessageId do SES para correlacionar o envio e futuras respostas
+          if (result.createdMessage) {
+            const updatedResult =
+              await kanbanCardsService.atualizaEmailData_Services(
+                result.createdMessage.id,
+                { message_id: emailResponse.MessageId }
+              );
+            console.log(
+              "Mensagem atualizada com MessageId do SES:",
+              updatedResult.updatedMessage
+            );
+          }
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
-          // Pode optar por retornar erro ou seguir mesmo que o envio falhe
+          // Você pode optar por tratar o erro ou seguir mesmo que o email falhe
         }
       }
 
@@ -100,7 +113,7 @@ class KanbanCards_Controller extends Controller {
     }
   }
 
-  // Método novo: Atualizar os dados do email
+  // Método para atualizar os dados do email consumido pela Lambda
   async atualizaEmailData_Controller(req, res) {
     try {
       // Payload esperado: { message_id, from_email, to_email, cc_email, bcc_email, subject, textBody, htmlBody, isReply }
@@ -125,7 +138,7 @@ class KanbanCards_Controller extends Controller {
 
       // Atualiza os dados do e-mail usando o service
       const result = await kanbanCardsService.atualizaEmailData_Services(
-        message_id,
+        message_id, // Aqui, espera-se que message_id seja o ID do registro (criado na criação do card)
         {
           from_email,
           to_email,
@@ -134,7 +147,7 @@ class KanbanCards_Controller extends Controller {
           subject,
           content_msg: textBody, // ou crie outro campo para htmlBody se necessário
           htmlBody,
-          isReply, // se desejar armazenar esta informação; caso contrário, remova
+          isReply,
         }
       );
       if (result.error) {

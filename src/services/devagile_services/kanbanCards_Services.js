@@ -45,6 +45,7 @@ class KanbanCards_Services {
           content_msg: descricao,
           atendente_id: null,
           cliente_id: null,
+          message_id: null,
         },
         { transaction }
       );
@@ -53,7 +54,12 @@ class KanbanCards_Services {
       await transaction.commit();
       console.log(`cardCreated-${setor_id}`);
       ws.broadcast({ type: `cardCreated-${setor_id}`, card });
-      return { card, error: false, message: "Cadastro realizado com sucesso" };
+      return {
+        card,
+        error: false,
+        message: "Cadastro realizado com sucesso",
+        createdMessage: message,
+      };
     } catch (error) {
       await transaction.rollback();
       return {
@@ -175,10 +181,13 @@ class KanbanCards_Services {
     }
   }
 
-  // NOVO MÉTODO: Atualiza os dados do e-mail em uma mensagem existente
-  async atualizaEmailData_Services(message_id, emailData) {
+  // NOVO MÉTODO: Atualiza os dados do email em uma mensagem existente
+  // Aqui, 'message_record_id' é o ID interno do registro criado na criação do card.
+  async atualizaEmailData_Services(message_record_id, emailData) {
     try {
-      const message = await devAgile.KanbanSessoesMessages.findByPk(message_id);
+      const message = await devAgile.KanbanSessoesMessages.findOne({
+        where: { message_id: message_record_id },
+      });
       if (!message) {
         return { error: true, message: "Mensagem não encontrada" };
       }
