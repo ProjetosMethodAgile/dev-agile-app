@@ -51,8 +51,9 @@ class KanbanSetores_Controller {
 
   // Cria um novo setor
   async criaSetor_Controller(req, res) {
-    const dados = req.body; // espera receber { empresa_id, nome }
+    const dados = req.body;
     const result = await this.kanbanSetoresService.criaSetor_Services(dados);
+
     if (result.error) {
       return res.status(500).json({ error: true, message: result.message });
     }
