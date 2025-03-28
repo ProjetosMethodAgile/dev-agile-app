@@ -10,6 +10,7 @@ router.get("/api/helpdesk/cardsBySetor/:id", checkTokenLogin, (req, res) =>
   kanbanCards_controller.pegaCardsPorSetorID(req, res)
 );
 
+// Rota para buscar um card específico
 router.get("/api/helpdesk/card/:card_id", checkTokenLogin, (req, res) =>
   kanbanCards_controller.pegaCardPorID(req, res)
 );
@@ -22,6 +23,11 @@ router.post("/api/helpdesk/card", (req, res) =>
 // Rota para atualizar a column_id do card
 router.put("/api/helpdesk/card/updateColumn", checkTokenLogin, (req, res) =>
   kanbanCards_controller.atualizaColumnCard_Controller(req, res)
+);
+
+// NOVA ROTA: Atualizar os dados do email (consumida pela Lambda)
+router.post("/api/helpdesk/email/update", (req, res) =>
+  kanbanCards_controller.atualizaEmailData_Controller(req, res)
 );
 
 module.exports = router;

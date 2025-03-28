@@ -1,5 +1,5 @@
 const { devAgile } = require("../../models");
-const KanbanCards_Services = require("../../services/devagile_services/kanbanCards_Services");
+const KanbanCards_Services = require("../../services/devagile_services/KanbanCards_Services");
 const KanbanSetores_Services = require("../../services/devagile_services/kanbanSetores_Services");
 const Controller = require("../Controller");
 const { sendEmail } = require("../../utils/sendEmail");
@@ -46,13 +46,13 @@ class KanbanCards_Controller extends Controller {
       }
       const setor = setorResult.setor;
 
-      // Busca a coluna do setor com posicao "0"
+      // Busca a coluna do setor com posição "0"
       const column = await devAgile.KanbanComlumns.findOne({
         where: { setor_id, posicao: "0" },
       });
       if (!column) {
         return res.status(404).json({
-          message: "Coluna de posicao 0 não encontrada para o setor informado",
+          message: "Coluna de posição 0 não encontrada para o setor informado",
           error: true,
         });
       }
@@ -86,7 +86,7 @@ class KanbanCards_Controller extends Controller {
           });
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
-          // Se preferir, você pode optar por retornar um erro ou continuar mesmo se o email falhar.
+          // Pode optar por retornar erro ou seguir mesmo que o envio falhe
         }
       }
 
@@ -94,6 +94,59 @@ class KanbanCards_Controller extends Controller {
         card: result.card,
         message: result.message,
         error: false,
+      });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  // Método novo: Atualizar os dados do email
+  async atualizaEmailData_Controller(req, res) {
+    try {
+      // Payload esperado: { message_id, from_email, to_email, cc_email, bcc_email, subject, textBody, htmlBody, isReply }
+      const {
+        message_id,
+        from_email,
+        to_email,
+        cc_email,
+        bcc_email,
+        subject,
+        textBody,
+        htmlBody,
+        isReply,
+      } = req.body;
+
+      if (!message_id) {
+        return res.status(400).json({
+          error: true,
+          message: "message_id é obrigatório",
+        });
+      }
+
+      // Atualiza os dados do e-mail usando o service
+      const result = await kanbanCardsService.atualizaEmailData_Services(
+        message_id,
+        {
+          from_email,
+          to_email,
+          cc_email,
+          bcc_email,
+          subject,
+          content_msg: textBody, // ou crie outro campo para htmlBody se necessário
+          htmlBody,
+          isReply, // se desejar armazenar esta informação; caso contrário, remova
+        }
+      );
+      if (result.error) {
+        return res.status(400).json({
+          error: true,
+          message: result.message,
+        });
+      }
+      return res.status(200).json({
+        error: false,
+        message: result.message,
+        updatedMessage: result.updatedMessage,
       });
     } catch (error) {
       return res.status(500).json({ error: error.message });

@@ -174,6 +174,27 @@ class KanbanCards_Services {
       throw new Error("Erro ao buscar cards: " + error.message);
     }
   }
+
+  // NOVO MÉTODO: Atualiza os dados do e-mail em uma mensagem existente
+  async atualizaEmailData_Services(message_id, emailData) {
+    try {
+      const message = await devAgile.KanbanSessoesMessages.findByPk(message_id);
+      if (!message) {
+        return { error: true, message: "Mensagem não encontrada" };
+      }
+      await message.update(emailData);
+      return {
+        error: false,
+        message: "Email atualizado com sucesso",
+        updatedMessage: message,
+      };
+    } catch (error) {
+      return {
+        error: true,
+        message: "Erro ao atualizar email: " + error.message,
+      };
+    }
+  }
 }
 
 module.exports = KanbanCards_Services;
