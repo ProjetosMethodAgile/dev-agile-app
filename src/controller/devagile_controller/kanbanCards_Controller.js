@@ -2,9 +2,8 @@ const { devAgile } = require("../../models");
 const KanbanCards_Services = require("../../services/devagile_services/kanbanCards_Services");
 const KanbanSetores_Services = require("../../services/devagile_services/kanbanSetores_Services");
 const Usuario_Services = require("../../services/devagile_services/Usuario_Services");
-
+const { sendEmailRaw } = require("../../utils/sendEmailRaw");
 const Controller = require("../Controller");
-const { sendEmail } = require("../../utils/sendEmail");
 
 const kanbanCardsService = new KanbanCards_Services();
 const usuarioServices = new Usuario_Services();
@@ -22,12 +21,11 @@ class KanbanCards_Controller extends Controller {
     super(kanbanCardsService, camposObrigatorios);
   }
 
+  // Método para cadastro de card sem usuário autenticado (fluxo já existente)
   async cadastraCard_Controller(req, res) {
     try {
       const { setor_id, src_img_capa, titulo_chamado, status, descricao } =
         req.body;
-
-      // Verifica se os campos obrigatórios foram preenchidos
       const isTrue = await this.allowNull(req, res);
       if (!isTrue.status) {
         return res.status(500).json({
@@ -36,8 +34,6 @@ class KanbanCards_Controller extends Controller {
           error: true,
         });
       }
-
-      // Valida se o setor existe
       const setorResult = await kanbanSetoresService.pegaSetorPorId_Services(
         setor_id
       );
@@ -48,8 +44,6 @@ class KanbanCards_Controller extends Controller {
         });
       }
       const setor = setorResult.setor;
-
-      // Busca a coluna do setor com posição "0"
       const column = await devAgile.KanbanComlumns.findOne({
         where: { setor_id, posicao: "0" },
       });
@@ -59,8 +53,6 @@ class KanbanCards_Controller extends Controller {
           error: true,
         });
       }
-
-      // Cria o card utilizando o id da coluna encontrada
       const result = await kanbanCardsService.cadastraCard_Services(
         column.id,
         src_img_capa,
@@ -75,37 +67,38 @@ class KanbanCards_Controller extends Controller {
           error: true,
         });
       }
-
-      // Envia email via AWS SES se o setor possuir um email válido
+      // Envia email via SES se o setor possuir um email válido
       if (setor.email_setor && isValidEmail(setor.email_setor)) {
-        const emailSubject = `Novo card criado: ${titulo_chamado} [Msg #${result.createdMessage.id}] `;
+        const emailSubject = `Novo card criado: ${titulo_chamado}`;
         const emailBody = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
         try {
-          // Envia o email e captura a resposta do SES
-          const emailResponse = await sendEmail({
+          // Envia o email e inclui o id do registro criado no header customizado
+          const emailResponse = await sendEmailRaw({
             to: process.env.MAIN_EMAIL,
             cc: setor.email_setor,
             subject: emailSubject,
             text: emailBody,
+            customHeaders: {
+              "X-MyApp-MessageId": result.createdMessage.id,
+            },
           });
-          // Atualiza o registro da mensagem com o MessageId do SES para correlacionar o envio e futuras respostas
-          if (result.createdMessage) {
-            const updatedResult =
-              await kanbanCardsService.atualizaEmailData_Services(
-                result.createdMessage.id,
-                { message_id: result.createdMessage.id }
-              );
-            console.log(
-              "Mensagem atualizada com MessageId do SES:",
-              updatedResult.updatedMessage
+          console.log("Email enviado. SES response:", emailResponse);
+
+          // Aqui você pode atualizar o registro com o MessageId retornado pelo SES,
+          // caso deseje que o valor salvo no banco seja o MessageId do SES.
+          const updatedResult =
+            await kanbanCardsService.atualizaEmailData_Services(
+              result.createdMessage.id,
+              { message_id: emailResponse.MessageId }
             );
-          }
+          console.log(
+            "Mensagem atualizada com MessageId do SES:",
+            updatedResult.updatedMessage
+          );
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
-          // Você pode optar por tratar o erro ou seguir mesmo que o email falhe
         }
       }
-
       return res.status(200).json({
         card: result.card,
         message: result.message,
@@ -127,21 +120,16 @@ class KanbanCards_Controller extends Controller {
         descricao,
         usuario_id,
       } = req.body;
-
       const usuario = await usuarioServices.pegaUsuarioPorId_Services(
         usuario_id
       );
-
       const user_email = usuario.usuario.email;
-
-      if (!usuario_id || user_email) {
+      if (!usuario_id || !user_email) {
         return res.status(400).json({
           error: true,
           message: "Usuário não autenticado ou sem email.",
         });
       }
-
-      // Verifica se os campos obrigatórios foram preenchidos
       const isTrue = await this.allowNull(req, res);
       if (!isTrue.status) {
         return res.status(500).json({
@@ -150,8 +138,6 @@ class KanbanCards_Controller extends Controller {
           error: true,
         });
       }
-
-      // Valida se o setor existe
       const setorResult = await kanbanSetoresService.pegaSetorPorId_Services(
         setor_id
       );
@@ -162,8 +148,6 @@ class KanbanCards_Controller extends Controller {
         });
       }
       const setor = setorResult.setor;
-
-      // Busca a coluna do setor com posição "0"
       const column = await devAgile.KanbanComlumns.findOne({
         where: { setor_id, posicao: "0" },
       });
@@ -173,8 +157,6 @@ class KanbanCards_Controller extends Controller {
           error: true,
         });
       }
-
-      // Cria o card utilizando o id da coluna encontrada, passando o usuario_id
       const result = await kanbanCardsService.cadastraCardAuth_Services(
         column.id,
         src_img_capa,
@@ -190,30 +172,34 @@ class KanbanCards_Controller extends Controller {
           error: true,
         });
       }
-
-      // Envia email via AWS SES: destinatário principal é o usuário autenticado e CC é o email do setor
-      if (usuarioEmail && isValidEmail(usuarioEmail)) {
-        const emailSubject = `Novo card criado: ${titulo_chamado} [Msg #${result.createdMessage.id}]`;
+      // Envio de email com header customizado e atualização do registro
+      if (user_email && isValidEmail(user_email)) {
+        const emailSubject = `Novo card criado: ${titulo_chamado}`;
         const emailBody = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
         try {
-          const emailResponse = await sendEmail({
-            to: usuarioEmail,
-            cc: setor.email_setor, // email do setor em cópia
+          // Envia o email e inclui no header o id que foi salvo
+          const emailResponse = await sendEmailRaw({
+            to: user_email,
+            cc: [setor.email_setor, process.env.MAIN_EMAIL],
             subject: emailSubject,
             text: emailBody,
+            customHeaders: {
+              "X-MyApp-MessageId": result.createdMessage.id,
+            },
           });
-          // Atualiza o registro da mensagem com o MessageId do SES
-          if (result.createdMessage) {
-            const updatedResult =
-              await kanbanCardsService.atualizaEmailData_Services(
-                result.createdMessage.id,
-                { message_id: emailResponse.MessageId }
-              );
-            console.log(
-              "Mensagem atualizada com MessageId do SES:",
-              updatedResult.updatedMessage
+          console.log("Email enviado. SES response:", emailResponse);
+
+          // Aqui você pode atualizar o registro com o MessageId retornado pelo SES,
+          // caso deseje que o valor salvo no banco seja o MessageId do SES.
+          const updatedResult =
+            await kanbanCardsService.atualizaEmailData_Services(
+              result.createdMessage.id,
+              { message_id: emailResponse.MessageId }
             );
-          }
+          console.log(
+            "Mensagem atualizada com MessageId do SES:",
+            updatedResult.updatedMessage
+          );
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
         }
@@ -229,7 +215,7 @@ class KanbanCards_Controller extends Controller {
     }
   }
 
-  // Método para atualizar os dados do email consumido pela Lambda
+  // Método para atualizar os dados do email (rota consumida pela Lambda)
   async atualizaEmailData_Controller(req, res) {
     try {
       // Payload esperado: { message_id, from_email, to_email, cc_email, bcc_email, subject, textBody, htmlBody, isReply }
@@ -244,33 +230,28 @@ class KanbanCards_Controller extends Controller {
         htmlBody,
         isReply,
       } = req.body;
-
       if (!message_id) {
         return res.status(400).json({
           error: true,
           message: "message_id é obrigatório",
         });
       }
-
-      // Atualiza os dados do e-mail usando o service
+      // Atualiza os dados do email usando o serviço, buscando pelo id do registro
       const result = await kanbanCardsService.atualizaEmailData_Services(
-        message_id, // Aqui, espera-se que message_id seja o ID do registro (criado na criação do card)
+        message_id,
         {
           from_email,
           to_email,
           cc_email,
           bcc_email,
           subject,
-          content_msg: textBody, // ou crie outro campo para htmlBody se necessário
+          content_msg: textBody,
           htmlBody,
           isReply,
         }
       );
       if (result.error) {
-        return res.status(400).json({
-          error: true,
-          message: result.message,
-        });
+        return res.status(400).json({ error: true, message: result.message });
       }
       return res.status(200).json({
         error: false,
@@ -287,10 +268,9 @@ class KanbanCards_Controller extends Controller {
       const { id } = req.params;
       const setor = await kanbanSetoresService.pegaSetorPorId_Services(id);
       if (!setor) {
-        return res.status(404).json({
-          message: "Setor não encontrado",
-          error: true,
-        });
+        return res
+          .status(404)
+          .json({ message: "Setor não encontrado", error: true });
       }
       const cards = await kanbanCardsService.pegaCardsPorSetorID_Services(id);
       return res.status(200).json({ cards });
@@ -325,32 +305,24 @@ class KanbanCards_Controller extends Controller {
         where: { id: new_column_id },
       });
       if (!column) {
-        return res.status(404).json({
-          error: true,
-          message: "Coluna não encontrada",
-        });
+        return res
+          .status(404)
+          .json({ error: true, message: "Coluna não encontrada" });
       }
       const result = await kanbanCardsService.atualizaColumnCard_Services(
         card_id,
         new_column_id
       );
       if (result.error) {
-        return res.status(400).json({
-          error: true,
-          message: result.message,
-        });
+        return res.status(400).json({ error: true, message: result.message });
       }
-      return res.status(200).json({
-        error: false,
-        message: result.message,
-      });
+      return res.status(200).json({ error: false, message: result.message });
     } catch (error) {
       return res.status(500).json({ error: true, message: error.message });
     }
   }
 }
 
-// Função auxiliar para validar email
 function isValidEmail(email) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return regex.test(email);
