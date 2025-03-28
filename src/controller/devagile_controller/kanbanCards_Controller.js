@@ -1,5 +1,5 @@
 const { devAgile } = require("../../models");
-const KanbanCards_Services = require("../../services/devagile_services/KanbanCards_Services");
+const KanbanCards_Services = require("../../services/devagile_services/kanbanCards_Services");
 const KanbanSetores_Services = require("../../services/devagile_services/kanbanSetores_Services");
 const Controller = require("../Controller");
 const { sendEmail } = require("../../utils/sendEmail");
