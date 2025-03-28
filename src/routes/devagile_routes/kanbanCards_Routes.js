@@ -20,6 +20,11 @@ router.post("/api/helpdesk/card", (req, res) =>
   kanbanCards_controller.cadastraCard_Controller(req, res)
 );
 
+// Nova rota para responder a uma mensagem
+router.post("/api/helpdesk/message/reply", checkTokenLogin, (req, res) =>
+  kanbanCards_controller.replyMessage_Controller(req, res)
+);
+
 // Rota para cadastrar um novo card para usuário autenticado
 router.post("/api/helpdesk/card/auth", checkTokenLogin, (req, res) =>
   kanbanCards_controller.cadastraCardAuth_Controller(req, res)

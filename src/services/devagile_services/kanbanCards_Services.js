@@ -111,6 +111,45 @@ class KanbanCards_Services {
     }
   }
 
+  async replyMessage_Services({
+    originalMsg,
+    content_msg,
+    atendente_id,
+    cliente_id,
+  }) {
+    const transaction = await sequelizeDevAgileCli.transaction();
+    try {
+      // Precisamos do sessao_id da mensagem original
+      // e do ID da mensagem original para 'in_reply_to'
+      const { sessao_id, id: originalId } = originalMsg;
+
+      // Cria a nova mensagem
+      const newMsg = await devAgile.KanbanSessoesMessages.create(
+        {
+          id: uuid.v4(),
+          sessao_id,
+          atendente_id: atendente_id || null,
+          cliente_id: cliente_id || null,
+          content_msg,
+          in_reply_to: originalId, // referencia a mensagem anterior
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
+      return { error: false, data: newMsg };
+    } catch (err) {
+      await transaction.rollback();
+      return { error: true, message: err.message };
+    }
+  }
+
+  async pegaMensagemPorId_Services(msgId) {
+    return await devAgile.KanbanSessoesMessages.findOne({
+      where: { message_id: msgId },
+    });
+  }
+
   async atualizaEmailData_Services(message_record_id, emailData) {
     try {
       const message = await devAgile.KanbanSessoesMessages.findOne({
