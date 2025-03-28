@@ -90,7 +90,7 @@ class KanbanCards_Controller extends Controller {
             const updatedResult =
               await kanbanCardsService.atualizaEmailData_Services(
                 result.createdMessage.id,
-                { message_id: emailResponse.MessageId }
+                { message_id: result.createdMessage.id }
               );
             console.log(
               "Mensagem atualizada com MessageId do SES:",
