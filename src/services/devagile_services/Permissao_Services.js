@@ -54,6 +54,28 @@ class Permissao_Services extends Services {
     return devAgile[this.nomeModel].findByPk(id);
   }
 
+  async pegaPermissoesPorRoleId_Services(id) {
+    try {
+      const permissoes = await devAgile.RolePermissao.findAll({
+        where: { role_id: id },
+        include: [
+          {
+            model: devAgile.Permissao,
+            as: "permissao",
+            attributes: ["id", "nome", "descricao", "parent_id"],
+          },
+        ],
+        attributes: [],
+      });
+
+      const resultado = permissoes.map((p) => p.permissao);
+      return { status: true, permissoes: resultado };
+    } catch (error) {
+      console.log(error);
+      throw new Error("Erro ao buscar permissões");
+    }
+  }
+
   async atualizaPermissao_Services(id, dados) {
     const permissao = await devAgile[this.nomeModel].findByPk(id);
     if (!permissao) return null;

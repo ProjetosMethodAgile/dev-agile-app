@@ -167,6 +167,27 @@ class Permissao_Controller extends Controller {
     }
   }
 
+  async pegaPermissoesPorRoleId(req, res) {
+    const { id } = req.params;
+    try {
+      const permissao =
+        await permissao_services.pegaPermissoesPorRoleId_Services(id);
+      if (permissao == null) {
+        return res.status(400).json({
+          message: `não foi possivel encontrar permissoes para a role`,
+          error: true
+        });
+      } else {
+        return res.status(200).json(permissao);
+      }
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({
+        message: `erro ao buscar registro, contate o administrador do sistema`,
+      });
+    }
+  }
+
   async atualizaPermissao_Controller(req, res) {
     const { id } = req.params;
     const { nome, descricao, parent_id, tipo_permissao_id, roleIds } = req.body;
