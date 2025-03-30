@@ -19,6 +19,10 @@ route.get("/api/permissoes/:id", checkTokenLogin, (req, res) =>
   permissao_controller.pegaPermissaoPorId_Controller(req, res)
 );
 
+route.get("/api/permissoes/roles/:id", checkTokenLogin, (req, res) =>
+  permissao_controller.pegaPermissoesPorRoleId(req, res)
+);
+
 route.delete("/api/permissoes/:id", checkTokenLogin, (req, res) =>
   permissao_controller.deletaPermissaoPorId_Controller(req, res)
 );
