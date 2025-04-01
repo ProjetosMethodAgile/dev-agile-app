@@ -176,7 +176,6 @@ class KanbanCards_Controller extends Controller {
         // Gere o Message-ID a partir do id já gerado (result.createdMessage.id)
         // e formate-o conforme o padrão: <uniqueid@dominio>
         const messageId = result.createdMessage.id;
-        const formattedMessageId = `<${messageId}@devagile.com>`;
 
         const emailSubject = `Novo card criado: ${titulo_chamado}`;
         const emailBody = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
@@ -188,7 +187,7 @@ class KanbanCards_Controller extends Controller {
             subject: emailSubject,
             text: emailBody,
             customHeaders: {
-              "Message-ID": formattedMessageId, // Header padrão que será usado pelos clientes de email
+              "message-id-db": messageId,
             },
           });
           console.log("Email enviado. SES response:", emailToSetorResponse);
@@ -198,20 +197,20 @@ class KanbanCards_Controller extends Controller {
             subject: emailSubject,
             text: emailBody,
             customHeaders: {
-              "Message-ID": formattedMessageId, // Header padrão que será usado pelos clientes de email
+              "message-id-db": messageId,
             },
           });
           console.log("Email enviado. SES response:", emailToUsrResponse);
 
-          // Atualiza o registro com o MessageId retornado pelo SES, se necessário
-          const updatedResult = await kanbanCardsService.AddMessageId_Services(
-            result.createdMessage.id,
-            { message_id: formattedMessageId }
-          );
-          console.log(
-            "Mensagem atualizada com MessageId do SES:",
-            formattedMessageId
-          );
+          // // Atualiza o registro com o MessageId retornado pelo SES, se necessário
+          // const updatedResult = await kanbanCardsService.AddMessageId_Services(
+          //   result.createdMessage.id,
+          //   { message_id: formattedMessageId }
+          // );
+          // console.log(
+          //   "Mensagem atualizada com MessageId do SES:",
+          //   formattedMessageId
+          // );
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
         }
@@ -238,6 +237,7 @@ class KanbanCards_Controller extends Controller {
     try {
       // Payload esperado: { message_id, from_email, to_email, cc_email, bcc_email, subject, textBody, htmlBody, isReply }
       const {
+        id,
         message_id,
         from_email,
         to_email,
@@ -255,19 +255,17 @@ class KanbanCards_Controller extends Controller {
         });
       }
       // Atualiza os dados do email usando o serviço, buscando pelo id do registro
-      const result = await kanbanCardsService.atualizaEmailData_Services(
+      const result = await kanbanCardsService.atualizaEmailData_Services(id, {
         message_id,
-        {
-          from_email,
-          to_email,
-          cc_email,
-          bcc_email,
-          subject,
-          content_msg: textBody,
-          htmlBody,
-          isReply,
-        }
-      );
+        from_email,
+        to_email,
+        cc_email,
+        bcc_email,
+        subject,
+        content_msg: textBody,
+        htmlBody,
+        isReply,
+      });
       if (result.error) {
         return res.status(400).json({ error: true, message: result.message });
       }
