@@ -150,6 +150,28 @@ class KanbanCards_Services {
     });
   }
 
+  async AddMessageId_Services(message_record_id, emailData) {
+    try {
+      const message = await devAgile.KanbanSessoesMessages.findOne({
+        where: { id: message_record_id },
+      });
+      if (!message) {
+        return { error: true, message: "Mensagem não encontrada" };
+      }
+      await message.update(emailData);
+      return {
+        error: false,
+        message: "Email atualizado com sucesso",
+        updatedMessage: message,
+      };
+    } catch (error) {
+      return {
+        error: true,
+        message: "Erro ao atualizar email: " + error.message,
+      };
+    }
+  }
+
   async atualizaEmailData_Services(message_record_id, emailData) {
     try {
       const message = await devAgile.KanbanSessoesMessages.findOne({

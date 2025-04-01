@@ -86,11 +86,10 @@ class KanbanCards_Controller extends Controller {
 
           // Aqui você pode atualizar o registro com o MessageId retornado pelo SES,
           // caso deseje que o valor salvo no banco seja o MessageId do SES.
-          const updatedResult =
-            await kanbanCardsService.atualizaEmailData_Services(
-              result.createdMessage.id,
-              { message_id: emailResponse.MessageId }
-            );
+          const updatedResult = await kanbanCardsService.AddMessageId_Services(
+            result.createdMessage.id,
+            { message_id: emailResponse.MessageId }
+          );
           console.log(
             "Mensagem atualizada com MessageId do SES:",
             updatedResult.updatedMessage
@@ -205,11 +204,10 @@ class KanbanCards_Controller extends Controller {
           console.log("Email enviado. SES response:", emailToUsrResponse);
 
           // Atualiza o registro com o MessageId retornado pelo SES, se necessário
-          const updatedResult =
-            await kanbanCardsService.atualizaEmailData_Services(
-              result.createdMessage.id,
-              { message_id: formattedMessageId }
-            );
+          const updatedResult = await kanbanCardsService.AddMessageId_Services(
+            result.createdMessage.id,
+            { message_id: formattedMessageId }
+          );
           console.log(
             "Mensagem atualizada com MessageId do SES:",
             formattedMessageId
