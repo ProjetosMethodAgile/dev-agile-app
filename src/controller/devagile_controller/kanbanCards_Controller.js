@@ -67,36 +67,32 @@ class KanbanCards_Controller extends Controller {
           error: true,
         });
       }
-      // Envia email via SES se o setor possuir um email válido
-      if (setor.email_setor && isValidEmail(setor.email_setor)) {
-        const emailSubject = `Novo card criado: ${titulo_chamado}`;
-        const emailBody = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
+      // Envio de email com header customizado e atualização do registro
+      if (user_email && isValidEmail(user_email)) {
+        // Gere o Message-ID a partir do id já gerado (result.createdMessage.id)
+
+        const messageId = result.createdMessage.id;
+
         try {
-          // Envia o email e inclui o id do registro criado no header customizado
-          const emailResponse = await sendEmailRaw({
-            to: process.env.MAIN_EMAIL,
-            cc: setor.email_setor,
-            subject: emailSubject,
-            text: emailBody,
+          // Envia o email definindo tanto o header customizado quanto o Message-ID padrão
+          const emailToSetorResponse = await sendEmailRaw({
+            to: [setor.email_setor, process.env.MAIN_EMAIL],
+            subject: `Novo ${titulo_chamado} Setor - ${setor.nome}`,
+            text: `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`,
             customHeaders: {
-              "X-MyApp-MessageId": emailResponse.MessageId,
+              "message-id-db": messageId,
             },
           });
-          console.log("Email enviado. SES response:", emailResponse.MessageId);
-
-          // Aqui você pode atualizar o registro com o MessageId retornado pelo SES,
-          // caso deseje que o valor salvo no banco seja o MessageId do SES.
-          const updatedResult = await kanbanCardsService.AddMessageId_Services(
-            result.createdMessage.id,
-            { message_id: emailResponse.MessageId }
-          );
-          console.log(
-            "Mensagem atualizada com MessageId do SES:",
-            updatedResult.updatedMessage
-          );
+          console.log("Email enviado. SES response:", emailToSetorResponse);
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
         }
+      } else {
+        return res.status(200).json({
+          card: result.card,
+          message: "E-mail não enviado",
+          error: false,
+        });
       }
       return res.status(200).json({
         card: result.card,
@@ -174,12 +170,7 @@ class KanbanCards_Controller extends Controller {
       // Envio de email com header customizado e atualização do registro
       if (user_email && isValidEmail(user_email)) {
         // Gere o Message-ID a partir do id já gerado (result.createdMessage.id)
-        // e formate-o conforme o padrão: <uniqueid@dominio>
         const messageId = result.createdMessage.id;
-
-        const emailSubject = `Recebemos seu ${titulo_chamado}`;
-        const emailBody = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
-
         try {
           // Envia o email definindo tanto o header customizado quanto o Message-ID padrão
           const emailToSetorResponse = await sendEmailRaw({
