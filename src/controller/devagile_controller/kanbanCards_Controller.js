@@ -109,7 +109,7 @@ class KanbanCards_Controller extends Controller {
     }
   }
 
-  // Novo método para cadastro com usuário autenticado
+  // método para cadastro com usuário autenticado
   async cadastraCardAuth_Controller(req, res) {
     try {
       const {
@@ -174,35 +174,55 @@ class KanbanCards_Controller extends Controller {
       }
       // Envio de email com header customizado e atualização do registro
       if (user_email && isValidEmail(user_email)) {
+        // Gere o Message-ID a partir do id já gerado (result.createdMessage.id)
+        // e formate-o conforme o padrão: <uniqueid@dominio>
+        const messageId = result.createdMessage.id;
+        const formattedMessageId = `<${messageId}@devagile.com>`;
+
         const emailSubject = `Novo card criado: ${titulo_chamado}`;
         const emailBody = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
+
         try {
-          // Envia o email e inclui no header o id que foi salvo
-          const emailResponse = await sendEmailRaw({
-            to: user_email,
-            cc: [setor.email_setor, process.env.MAIN_EMAIL],
+          // Envia o email definindo tanto o header customizado quanto o Message-ID padrão
+          const emailToSetorResponse = await sendEmailRaw({
+            to: [setor.email_setor, process.env.MAIN_EMAIL],
             subject: emailSubject,
             text: emailBody,
             customHeaders: {
-              "X-MyApp-MessageId": result.createdMessage.id,
+              "Message-ID": formattedMessageId, // Header padrão que será usado pelos clientes de email
             },
           });
-          console.log("Email enviado. SES response:", emailResponse);
+          console.log("Email enviado. SES response:", emailToSetorResponse);
+          const emailToUsrResponse = await sendEmailRaw({
+            to: user_email,
+            cc: [process.env.MAIN_EMAIL],
+            subject: emailSubject,
+            text: emailBody,
+            customHeaders: {
+              "Message-ID": formattedMessageId, // Header padrão que será usado pelos clientes de email
+            },
+          });
+          console.log("Email enviado. SES response:", emailToUsrResponse);
 
-          // Aqui você pode atualizar o registro com o MessageId retornado pelo SES,
-          // caso deseje que o valor salvo no banco seja o MessageId do SES.
+          // Atualiza o registro com o MessageId retornado pelo SES, se necessário
           const updatedResult =
             await kanbanCardsService.atualizaEmailData_Services(
               result.createdMessage.id,
-              { message_id: emailResponse.MessageId }
+              { message_id: formattedMessageId }
             );
           console.log(
             "Mensagem atualizada com MessageId do SES:",
-            emailResponse
+            formattedMessageId
           );
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
         }
+      } else {
+        return res.status(200).json({
+          card: result.card,
+          message: "E-mail não enviado",
+          error: false,
+        });
       }
 
       return res.status(200).json({
