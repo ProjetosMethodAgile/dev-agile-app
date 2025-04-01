@@ -11,9 +11,9 @@ const sesClient = new SESClient({ region: process.env.AWS_REGION });
  * @param {string} params.subject - Assunto do email.
  * @param {string} params.text - Corpo do email em texto.
  * @param {string} [params.html] - Corpo do email em HTML (opcional).
- * @param {Object} [params.customHeaders] - Headers customizados, ex: { "X-MyApp-MessageId": "valor" }.
- * @param {string} [params.inReplyTo] - Valor para o cabeçalho In-Reply-To (ex.: <messageId>).
- * @param {string} [params.references] - Valor para o cabeçalho References (ex.: <messageIdAnterior> <messageIdAtual>).
+ * @param {Object} [params.customHeaders] - Headers customizados, ex: { "X-MyApp-MessageId": "valor", "Message-ID": "valor" }.
+ * @param {string} [params.inReplyTo] - Valor para o cabeçalho In-Reply-To (ex.: messageId).
+ * @param {string} [params.references] - Valor para o cabeçalho References (ex.: <id1> <id2>).
  */
 async function sendEmailRaw({
   to,
@@ -26,38 +26,57 @@ async function sendEmailRaw({
   references,
 }) {
   const toAddresses = Array.isArray(to) ? to.join(", ") : to;
-  const ccAddresses = cc ? (Array.isArray(cc) ? cc.join(", ") : cc) : "";
+  const ccAddresses = cc ? (Array.isArray(cc) ? cc.join(", ") : cc) : null;
 
-  let rawMessage = "";
-  rawMessage += `From: ${process.env.MAIN_EMAIL}\n`;
-  rawMessage += `To: ${toAddresses}\n`;
+  // Utilize um array para construir a mensagem linha a linha
+  const lines = [];
+  lines.push(`From: ${process.env.MAIN_EMAIL}`);
+  lines.push(`To: ${toAddresses}`);
   if (ccAddresses) {
-    rawMessage += `Cc: ${ccAddresses}\n`;
+    lines.push(`Cc: ${ccAddresses}`);
   }
-  rawMessage += `Subject: ${subject}\n`;
+  lines.push(`Subject: ${subject}`);
 
-  // Se houver cabeçalhos customizados, adiciona-os
+  // Adiciona os headers customizados, tratando o "Message-ID" para garantir o padrão
   if (customHeaders) {
     for (const [key, value] of Object.entries(customHeaders)) {
-      rawMessage += `${key}: ${value}\n`;
+      if (key.toLowerCase() === "message-id") {
+        let formatted = value;
+        if (!formatted.startsWith("<")) {
+          formatted = `<${formatted}`;
+        }
+        if (!formatted.endsWith(">")) {
+          formatted = `${formatted}>`;
+        }
+        lines.push(`Message-ID: ${formatted}`);
+      } else {
+        lines.push(`${key}: ${value}`);
+      }
     }
   }
 
-  // Cabeçalhos específicos para manter threads de email
+  // Cabeçalhos para threading de emails
   if (inReplyTo) {
-    // Em geral, deve ser algo como: <messageId>
-    rawMessage += `In-Reply-To: <${inReplyTo}>\n`;
+    let formatted = inReplyTo;
+    if (!formatted.startsWith("<")) {
+      formatted = `<${formatted}`;
+    }
+    if (!formatted.endsWith(">")) {
+      formatted = `${formatted}>`;
+    }
+    lines.push(`In-Reply-To: ${formatted}`);
   }
   if (references) {
-    // Podem ser vários message-ids, ex.: <id1> <id2>
-    rawMessage += `References: ${references}\n`;
+    lines.push(`References: ${references}`);
   }
 
-  rawMessage += "MIME-Version: 1.0\n";
+  lines.push("MIME-Version: 1.0");
 
+  let rawMessage = "";
   if (html) {
     const boundary = "----=_Part_Boundary_123456";
-    rawMessage += `Content-Type: multipart/alternative; boundary="${boundary}"\n\n`;
+    lines.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
+    rawMessage = lines.join("\n") + "\n\n";
     rawMessage += `--${boundary}\n`;
     rawMessage += `Content-Type: text/plain; charset="UTF-8"\n\n`;
     rawMessage += `${text}\n\n`;
@@ -66,8 +85,8 @@ async function sendEmailRaw({
     rawMessage += `${html}\n\n`;
     rawMessage += `--${boundary}--`;
   } else {
-    rawMessage += `Content-Type: text/plain; charset="UTF-8"\n\n`;
-    rawMessage += text;
+    lines.push(`Content-Type: text/plain; charset="UTF-8"`);
+    rawMessage = lines.join("\n") + "\n\n" + text;
   }
 
   const command = new SendRawEmailCommand({
