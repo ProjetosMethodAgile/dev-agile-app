@@ -116,8 +116,15 @@ class KanbanCards_Services {
     textBody,
     atendente_id,
     cliente_id,
-    email_message_id,
     inReplyTo,
+    from_email,
+    message_id,
+    htmlBody,
+    to_email,
+    cc_email,
+    bcc_email,
+    subject,
+    references,
   }) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
@@ -135,7 +142,13 @@ class KanbanCards_Services {
           cliente_id: cliente_id || null,
           textBody,
           in_reply_to: inReplyTo, // referencia a mensagem original
-          message_id: email_message_id || null, // grava o Message-ID do email, se existir
+          message_id: message_id || null, // grava o Message-ID do email, se existir
+          from_email,
+          to_email,
+          cc_email,
+          bcc_email,
+          subject,
+          references_email: references,
         },
         { transaction }
       );

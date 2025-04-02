@@ -263,12 +263,23 @@ class KanbanCards_Controller extends Controller {
   async replyMessage_Controller(req, res) {
     try {
       // Agora esperamos também message_id no payload (opcional)
-      const { inReplyTo, textBody, message_id } = req.body;
-      if (!message_id || !textBody) {
+      const {
+        inReplyTo,
+        textBody,
+        message_id,
+        from_email,
+        htmlBody,
+        to_email,
+        cc_email,
+        bcc_email,
+        subject,
+        references,
+      } = req.body;
+      if (!inReplyTo || !textBody) {
         return res.status(400).json({
           error: true,
           message:
-            "Dados insuficientes (message_id e textBody são obrigatórios).",
+            "Dados insuficientes (inReplyTo e textBody são obrigatórios).",
         });
       }
 
@@ -292,6 +303,8 @@ class KanbanCards_Controller extends Controller {
       console.log(cliente_id);
       console.log("message_id");
       console.log(message_id);
+      console.log("htmlBody");
+      console.log(htmlBody);
 
       // 2. Cria a nova mensagem, vinculando-a à mensagem original
       const newMessage = await kanbanCardsService.replyMessage_Services({
@@ -301,6 +314,13 @@ class KanbanCards_Controller extends Controller {
         cliente_id,
         message_id, // repassa o message id do email que foi enviado, se existir
         inReplyTo,
+        from_email,
+        htmlBody,
+        to_email,
+        cc_email,
+        bcc_email,
+        subject,
+        references,
       });
 
       if (newMessage.error) {
