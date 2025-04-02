@@ -262,28 +262,25 @@ class KanbanCards_Controller extends Controller {
 
   async replyMessage_Controller(req, res) {
     try {
-      /*
-        Exemplo de body esperado:
-        {
-          "original_message_id": "uuid-da-mensagem",
-          "content_msg": "Texto da resposta",
-          // se quiser, pode passar "usuario_id" ou "atendente_id"
-          // ou deduzir do token (req.user)
-        }
-      */
-      const { original_message_id, content_msg, atendente_id, cliente_id } =
-        req.body;
-      if (!original_message_id || !content_msg) {
+      // Agora esperamos também email_message_id no payload (opcional)
+      const {
+        message_id,
+        content_msg,
+        atendente_id,
+        cliente_id,
+        email_message_id,
+      } = req.body;
+      if (!message_id || !content_msg) {
         return res.status(400).json({
           error: true,
           message:
-            "Dados insuficientes (original_message_id e content_msg são obrigatórios).",
+            "Dados insuficientes (message_id e content_msg são obrigatórios).",
         });
       }
 
-      // 1. Localiza a mensagem original
+      // 1. Localiza a mensagem original (usando o identificador que o sistema utiliza, por exemplo, o id gravado no DB)
       const originalMsg = await kanbanCardsService.pegaMensagemPorId_Services(
-        original_message_id
+        message_id
       );
       if (!originalMsg) {
         return res.status(404).json({
@@ -292,12 +289,13 @@ class KanbanCards_Controller extends Controller {
         });
       }
 
-      // 3. Cria a nova mensagem (in_reply_to = original_message_id)
+      // 2. Cria a nova mensagem, vinculando-a à mensagem original
       const newMessage = await kanbanCardsService.replyMessage_Services({
         originalMsg,
         content_msg,
         atendente_id,
         cliente_id,
+        email_message_id, // repassa o message id do email, se existir
       });
 
       if (newMessage.error) {
@@ -306,15 +304,14 @@ class KanbanCards_Controller extends Controller {
           .json({ error: true, message: newMessage.message });
       }
 
-      //se o foi o atendente que mandou a menssagem, envia para o email cliente, caso contrario manda para o atendente
+      // 3. Envia notificação por email
+      // Se for resposta do atendente (no sistema), envia para o usuário
+      // Caso contrário, se for resposta do usuário, envia para o atendente/sector
       if (atendente_id) {
         await sendEmailRaw({
-          to: originalMsg.from_email,
+          to: originalMsg.from_email, // destinatário é o email do usuário que abriu o chamado
           subject: `Re: Chamado #${originalMsg.sessao_id}`,
           text: `Atendente respondeu: ${content_msg}`,
-          // Se quiser HTML
-          // html: `<p>Atendente respondeu: ${content_msg}</p>`,
-          // Se a mensagem original tem "message_id" = <xxx@ses.amazonaws.com>
           inReplyTo: originalMsg.message_id,
           references: `<${originalMsg.message_id}>`,
           customHeaders: {
@@ -322,14 +319,10 @@ class KanbanCards_Controller extends Controller {
           },
         });
       } else {
-        // se foi o usuario que mandou a mensagem, envia para o atendente / setor
         await sendEmailRaw({
-          to: originalMsg.from_email,
+          to: originalMsg.from_email, // destinatário é o email do setor ou do atendente
           subject: `Re: Chamado #${originalMsg.sessao_id}`,
-          text: `Usuario respondeu: ${content_msg}`,
-          // Se quiser HTML
-          // html: `<p>Atendente respondeu: ${content_msg}</p>`,
-          // Se a mensagem original tem "message_id" = <xxx@ses.amazonaws.com>
+          text: `Usuário respondeu: ${content_msg}`,
           inReplyTo: originalMsg.message_id,
           references: `<${originalMsg.message_id}>`,
           customHeaders: {
