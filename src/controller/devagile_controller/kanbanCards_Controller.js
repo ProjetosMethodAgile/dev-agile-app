@@ -262,14 +262,8 @@ class KanbanCards_Controller extends Controller {
 
   async replyMessage_Controller(req, res) {
     try {
-      // Agora esperamos também email_message_id no payload (opcional)
-      const {
-        message_id,
-        textBody,
-        atendente_id,
-        cliente_id,
-        email_message_id,
-      } = req.body;
+      // Agora esperamos também message_id no payload (opcional)
+      const { inReplyTo, textBody, message_id } = req.body;
       if (!message_id || !textBody) {
         return res.status(400).json({
           error: true,
@@ -280,7 +274,7 @@ class KanbanCards_Controller extends Controller {
 
       // 1. Localiza a mensagem original (usando o identificador que o sistema utiliza, por exemplo, o id gravado no DB)
       const originalMsg = await kanbanCardsService.pegaMensagemPorId_Services(
-        message_id
+        inReplyTo
       );
       if (!originalMsg) {
         return res.status(404).json({
@@ -288,14 +282,16 @@ class KanbanCards_Controller extends Controller {
           message: "Mensagem original não encontrada",
         });
       }
+      const cliente_id = originalMsg.cliente_id;
+      const atendente_id = originalMsg.atendente_id;
 
       // 2. Cria a nova mensagem, vinculando-a à mensagem original
       const newMessage = await kanbanCardsService.replyMessage_Services({
-        originalMsg,
-        textBody,
+        originalMsg, // dados da menssagem respondida
+        textBody, //corpo do email
         atendente_id,
         cliente_id,
-        email_message_id, // repassa o message id do email, se existir
+        message_id, // repassa o message id do email que foi enviado, se existir
       });
 
       if (newMessage.error) {
