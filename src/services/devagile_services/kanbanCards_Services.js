@@ -113,7 +113,7 @@ class KanbanCards_Services {
 
   async replyMessage_Services({
     originalMsg,
-    content_msg,
+    textBody,
     atendente_id,
     cliente_id,
     email_message_id,
@@ -133,7 +133,7 @@ class KanbanCards_Services {
           sessao_id,
           atendente_id: atendente_id || null,
           cliente_id: cliente_id || null,
-          content_msg,
+          textBody,
           in_reply_to: inReplyTo, // referencia a mensagem original
           message_id: email_message_id || null, // grava o Message-ID do email, se existir
         },
