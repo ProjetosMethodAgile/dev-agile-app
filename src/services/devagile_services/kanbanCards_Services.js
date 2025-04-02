@@ -116,14 +116,16 @@ class KanbanCards_Services {
     content_msg,
     atendente_id,
     cliente_id,
+    email_message_id,
   }) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
-      // Precisamos do sessao_id da mensagem original
-      // e do ID da mensagem original para 'in_reply_to'
+      // Obtemos o sessao_id e o id da mensagem original (para vinculação via in_reply_to)
       const { sessao_id, id: originalId } = originalMsg;
 
       // Cria a nova mensagem
+      // Aqui, se email_message_id for fornecido, o armazenamos no campo message_id,
+      // garantindo que o email que originou a resposta seja identificado.
       const newMsg = await devAgile.KanbanSessoesMessages.create(
         {
           id: uuid.v4(),
@@ -131,7 +133,8 @@ class KanbanCards_Services {
           atendente_id: atendente_id || null,
           cliente_id: cliente_id || null,
           content_msg,
-          in_reply_to: originalId, // referencia a mensagem anterior
+          in_reply_to: originalId, // referencia a mensagem original
+          message_id: email_message_id || null, // grava o Message-ID do email, se existir
         },
         { transaction }
       );
