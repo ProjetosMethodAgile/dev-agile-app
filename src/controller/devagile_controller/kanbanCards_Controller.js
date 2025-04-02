@@ -285,6 +285,14 @@ class KanbanCards_Controller extends Controller {
       const cliente_id = originalMsg.cliente_id;
       const atendente_id = originalMsg.atendente_id;
 
+      console.log(textBody);
+      console.log("atendente_id");
+      console.log(atendente_id);
+      console.log("cliente_id");
+      console.log(cliente_id);
+      console.log("message_id");
+      console.log(message_id);
+
       // 2. Cria a nova mensagem, vinculando-a à mensagem original
       const newMessage = await kanbanCardsService.replyMessage_Services({
         originalMsg, // dados da menssagem respondida
@@ -292,6 +300,7 @@ class KanbanCards_Controller extends Controller {
         atendente_id,
         cliente_id,
         message_id, // repassa o message id do email que foi enviado, se existir
+        inReplyTo,
       });
 
       if (newMessage.error) {
@@ -304,27 +313,27 @@ class KanbanCards_Controller extends Controller {
       // Se for resposta do atendente (no sistema), envia para o usuário
       // Caso contrário, se for resposta do usuário, envia para o atendente/sector
       if (atendente_id) {
-        await sendEmailRaw({
-          to: originalMsg.from_email, // destinatário é o email do usuário que abriu o chamado
-          subject: `Re: Chamado #${originalMsg.sessao_id}`,
-          text: `Atendente respondeu: ${textBody}`,
-          inReplyTo: originalMsg.message_id,
-          references: `<${originalMsg.message_id}>`,
-          customHeaders: {
-            "X-MyApp-MessageId": newMessage.data.id,
-          },
-        });
+        // await sendEmailRaw({
+        //   to: originalMsg.from_email, // destinatário é o email do usuário que abriu o chamado
+        //   subject: `Re: Chamado #${originalMsg.sessao_id}`,
+        //   text: `Atendente respondeu: ${textBody}`,
+        //   inReplyTo: originalMsg.message_id,
+        //   references: `<${originalMsg.message_id}>`,
+        //   customHeaders: {
+        //     "X-MyApp-MessageId": newMessage.data.id,
+        //   },
+        // });
       } else {
-        await sendEmailRaw({
-          to: originalMsg.from_email, // destinatário é o email do setor ou do atendente
-          subject: `Re: Chamado #${originalMsg.sessao_id}`,
-          text: `Usuário respondeu: ${textBody}`,
-          inReplyTo: originalMsg.message_id,
-          references: `<${originalMsg.message_id}>`,
-          customHeaders: {
-            "X-MyApp-MessageId": newMessage.data.id,
-          },
-        });
+        // await sendEmailRaw({
+        //   to: originalMsg.from_email, // destinatário é o email do setor ou do atendente
+        //   subject: `Re: Chamado #${originalMsg.sessao_id}`,
+        //   text: `Usuário respondeu: ${textBody}`,
+        //   inReplyTo: originalMsg.message_id,
+        //   references: `<${originalMsg.message_id}>`,
+        //   customHeaders: {
+        //     "X-MyApp-MessageId": newMessage.data.id,
+        //   },
+        // });
       }
 
       return res.status(200).json({
