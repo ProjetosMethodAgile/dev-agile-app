@@ -243,7 +243,7 @@ class KanbanCards_Controller extends Controller {
         cc_email,
         bcc_email,
         subject,
-        content_msg: textBody,
+        textBody: textBody,
         htmlBody,
         isReply,
       });
@@ -265,16 +265,16 @@ class KanbanCards_Controller extends Controller {
       // Agora esperamos também email_message_id no payload (opcional)
       const {
         message_id,
-        content_msg,
+        textBody,
         atendente_id,
         cliente_id,
         email_message_id,
       } = req.body;
-      if (!message_id || !content_msg) {
+      if (!message_id || !textBody) {
         return res.status(400).json({
           error: true,
           message:
-            "Dados insuficientes (message_id e content_msg são obrigatórios).",
+            "Dados insuficientes (message_id e textBody são obrigatórios).",
         });
       }
 
@@ -292,7 +292,7 @@ class KanbanCards_Controller extends Controller {
       // 2. Cria a nova mensagem, vinculando-a à mensagem original
       const newMessage = await kanbanCardsService.replyMessage_Services({
         originalMsg,
-        content_msg,
+        textBody,
         atendente_id,
         cliente_id,
         email_message_id, // repassa o message id do email, se existir
@@ -311,7 +311,7 @@ class KanbanCards_Controller extends Controller {
         await sendEmailRaw({
           to: originalMsg.from_email, // destinatário é o email do usuário que abriu o chamado
           subject: `Re: Chamado #${originalMsg.sessao_id}`,
-          text: `Atendente respondeu: ${content_msg}`,
+          text: `Atendente respondeu: ${textBody}`,
           inReplyTo: originalMsg.message_id,
           references: `<${originalMsg.message_id}>`,
           customHeaders: {
@@ -322,7 +322,7 @@ class KanbanCards_Controller extends Controller {
         await sendEmailRaw({
           to: originalMsg.from_email, // destinatário é o email do setor ou do atendente
           subject: `Re: Chamado #${originalMsg.sessao_id}`,
-          text: `Usuário respondeu: ${content_msg}`,
+          text: `Usuário respondeu: ${textBody}`,
           inReplyTo: originalMsg.message_id,
           references: `<${originalMsg.message_id}>`,
           customHeaders: {
