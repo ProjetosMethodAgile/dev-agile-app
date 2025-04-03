@@ -1,3 +1,4 @@
+const { where } = require("sequelize");
 const { devAgile } = require("../../models");
 const KanbanCards_Services = require("../../services/devagile_services/kanbanCards_Services");
 const KanbanSetores_Services = require("../../services/devagile_services/kanbanSetores_Services");
@@ -274,7 +275,9 @@ class KanbanCards_Controller extends Controller {
         bcc_email,
         subject,
         references,
+        identify_atendente,
       } = req.body;
+      console.log(inReplyTo);
       if (!inReplyTo || !textBody) {
         return res.status(400).json({
           error: true,
@@ -293,18 +296,28 @@ class KanbanCards_Controller extends Controller {
           message: "Mensagem original não encontrada",
         });
       }
-      const cliente_id = originalMsg.cliente_id;
-      const atendente_id = originalMsg.atendente_id;
 
-      console.log(textBody);
-      console.log("atendente_id");
-      console.log(atendente_id);
-      console.log("cliente_id");
-      console.log(cliente_id);
-      console.log("message_id");
-      console.log(message_id);
-      console.log("htmlBody");
-      console.log(htmlBody);
+      let cliente_id;
+      let atendente_id;
+      //quando solicitado do front é passado um usuario id para identificar o atendente_id
+      if (identify_atendente) {
+        const atendente = await devAgile.KanbanAtendenteHelpDesk.findOne({
+          where: { usuario_id: identify_atendente },
+        });
+        atendente_id = atendente.id;
+      } else {
+        cliente_id = originalMsg.cliente_id;
+      }
+
+      // console.log(textBody);
+      // console.log("atendente_id");
+      // console.log(atendente_id);
+      // console.log("cliente_id");
+      // console.log(cliente_id);
+      // console.log("message_id");
+      // console.log(message_id);
+      // console.log("htmlBody");
+      // console.log(htmlBody);
 
       // 2. Cria a nova mensagem, vinculando-a à mensagem original
       const newMessage = await kanbanCardsService.replyMessage_Services({
