@@ -140,10 +140,10 @@ class KanbanCards_Services {
           sessao_id,
           atendente_id: atendente_id || null,
           cliente_id: cliente_id || null,
-          textBody,
+          content_msg: textBody,
           in_reply_to: inReplyTo, // referencia a mensagem original
           message_id: message_id || null, // grava o Message-ID do email, se existir
-          from_email,
+          from_email: from_email || null,
           to_email,
           cc_email,
           bcc_email,
@@ -293,13 +293,20 @@ class KanbanCards_Services {
                   "content_msg",
                   "createdAt",
                   "updatedAt",
+                  "message_id",
+                  "from_email",
+                  "to_email",
+                  "cc_email",
+                  "subject",
+                  "in_reply_to",
+                  "references_email",
                 ],
-                order: [["createdAt", "ASC"]],
+                order: [["createdAt", "DESC"]],
                 include: [
                   {
                     model: devAgile.Usuario,
                     as: "ClienteSessao",
-                    attributes: ["nome"],
+                    attributes: ["nome", "email"],
                   },
                   {
                     model: devAgile.KanbanAtendenteHelpDesk,
