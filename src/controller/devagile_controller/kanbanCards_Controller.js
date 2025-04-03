@@ -346,16 +346,16 @@ class KanbanCards_Controller extends Controller {
       // Se for resposta do atendente (no sistema), envia para o usuário
       // Caso contrário, se for resposta do usuário, envia para o atendente/sector
       if (atendente_id) {
-        // await sendEmailRaw({
-        //   to: originalMsg.from_email, // destinatário é o email do usuário que abriu o chamado
-        //   subject: `Re: Chamado #${originalMsg.sessao_id}`,
-        //   text: `Atendente respondeu: ${textBody}`,
-        //   inReplyTo: originalMsg.message_id,
-        //   references: `<${originalMsg.message_id}>`,
-        //   customHeaders: {
-        //     "X-MyApp-MessageId": newMessage.data.id,
-        //   },
-        // });
+        await sendEmailRaw({
+          to: originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
+          subject: `Re: Chamado #${originalMsg.sessao_id}`,
+          text: `Atendente respondeu: ${textBody}`,
+          inReplyTo: originalMsg.message_id,
+          references: `<${originalMsg.message_id}>`,
+          customHeaders: {
+            "message-id-db": newMessage.data.id, //usado para que na lambda a reposta consiga idenmtificar e atribuir o real id desse email no DB
+          },
+        });
       } else {
         // await sendEmailRaw({
         //   to: originalMsg.from_email, // destinatário é o email do setor ou do atendente
@@ -364,7 +364,7 @@ class KanbanCards_Controller extends Controller {
         //   inReplyTo: originalMsg.message_id,
         //   references: `<${originalMsg.message_id}>`,
         //   customHeaders: {
-        //     "X-MyApp-MessageId": newMessage.data.id,
+        //     "message-id-db": newMessage.data.id,
         //   },
         // });
       }
