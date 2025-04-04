@@ -78,16 +78,16 @@ class KanbanCards_Controller extends Controller {
             cc: setor.email_setor,
             subject: emailSubject,
             text: emailBody,
-            customHeaders: {
-              "X-MyApp-MessageId": emailResponse.MessageId,
-            },
+            // customHeaders: {
+            //   "X-MyApp-MessageId": emailResponse.MessageId,
+            // },
           });
           console.log("Email enviado. SES response:", emailResponse.MessageId);
 
           // Aqui você pode atualizar o registro com o MessageId retornado pelo SES,
           // caso deseje que o valor salvo no banco seja o MessageId do SES.
           const updatedResult =
-            await kanbanCardsService.atualizaEmailData_Services(
+            await kanbanCardsService.atualizaEmailData_Service(
               result.createdMessage.id,
               { message_id: emailResponse.MessageId }
             );
@@ -208,7 +208,7 @@ class KanbanCards_Controller extends Controller {
 
           // Atualiza o registro com o MessageId retornado pelo SES, se necessário
           const updatedResult =
-            await kanbanCardsService.atualizaEmailData_Services(
+            await kanbanCardsService.atualizaEmailData_Service(
               result.createdMessage.id,
               { message_id: formattedMessageId }
             );
@@ -216,6 +216,12 @@ class KanbanCards_Controller extends Controller {
             "Mensagem atualizada com MessageId do SES:",
             formattedMessageId
           );
+          return res.status(200).json({
+            card: result.card,
+            atualizacao: updatedResult.updatedMessage,
+            message: result.message,
+            error: false,
+          });
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
         }
@@ -226,12 +232,6 @@ class KanbanCards_Controller extends Controller {
           error: false,
         });
       }
-
-      return res.status(200).json({
-        card: result.card,
-        message: result.message,
-        error: false,
-      });
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
