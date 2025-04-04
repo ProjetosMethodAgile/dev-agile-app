@@ -259,7 +259,7 @@ class KanbanCards_Controller extends Controller {
         });
       }
       // Atualiza os dados do email usando o serviço, buscando pelo id do registro
-      const result = await kanbanCardsService.atualizaEmailData_Services(
+      const result = await kanbanCardsService.atualizaEmailData_Service(
         message_id,
         {
           from_email,
