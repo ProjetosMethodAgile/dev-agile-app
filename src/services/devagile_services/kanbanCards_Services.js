@@ -154,7 +154,7 @@ class KanbanCards_Services {
   async atualizaEmailDataPorEmailID_Service(id, emailData) {
     try {
       const message = await devAgile.KanbanSessoesMessages.findOne({
-        where: { id: id },
+        where: { message_id: id },
       });
       if (!message) {
         return { error: true, message: "Mensagem não encontrada" };
