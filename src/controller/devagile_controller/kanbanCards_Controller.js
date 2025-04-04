@@ -371,7 +371,7 @@ class KanbanCards_Controller extends Controller {
       // Se for resposta do atendente (no sistema), envia para o usuário
       // Caso contrário, se for resposta do usuário, envia para o atendente/sector
       if (atendente_id) {
-        await sendEmailRaw({
+        const emailToUsrResponse = await sendEmailRaw({
           to: originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
           subject: `Re: Chamado #${originalMsg.sessao_id}`,
           text: `Atendente respondeu: ${textBody}`,
@@ -381,6 +381,12 @@ class KanbanCards_Controller extends Controller {
           //   "message-id-db": newMessage.data.id, //usado para que na lambda a reposta consiga idenmtificar e atribuir o real id desse email no DB
           // },
         });
+
+        console.log("Email respondido. SES response:", emailToUsrResponse);
+        //pegando id da message enviada por email para o usuario e concatenando com o dominio do AWS SES para a validação na lambda comparar e atribuir os valores
+        const messageId = emailToUsrResponse.MessageId;
+        const formattedMessageId = `<${messageId}@sa-east-1.amazonses.com>`;
+
         // Atualiza o registro com o MessageId retornado pelo SES, se necessário
         const updatedResult =
           await kanbanCardsService.atualizaEmailDataPorID_Service(
