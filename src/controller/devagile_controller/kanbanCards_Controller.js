@@ -1,4 +1,3 @@
-const { where } = require("sequelize");
 const { devAgile } = require("../../models");
 const KanbanCards_Services = require("../../services/devagile_services/kanbanCards_Services");
 const KanbanSetores_Services = require("../../services/devagile_services/kanbanSetores_Services");
@@ -68,32 +67,37 @@ class KanbanCards_Controller extends Controller {
           error: true,
         });
       }
-      // Envio de email com header customizado e atualização do registro
-      if (user_email && isValidEmail(user_email)) {
-        // Gere o Message-ID a partir do id já gerado (result.createdMessage.id)
-
-        const messageId = result.createdMessage.id;
-
+      // Envia email via SES se o setor possuir um email válido
+      if (setor.email_setor && isValidEmail(setor.email_setor)) {
+        const emailSubject = `Novo card criado: ${titulo_chamado}`;
+        const emailBody = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
         try {
-          // Envia o email definindo tanto o header customizado quanto o Message-ID padrão
-          const emailToSetorResponse = await sendEmailRaw({
-            to: [setor.email_setor, process.env.MAIN_EMAIL],
-            subject: `Novo ${titulo_chamado} Setor - ${setor.nome}`,
-            text: `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`,
+          // Envia o email e inclui o id do registro criado no header customizado
+          const emailResponse = await sendEmailRaw({
+            to: process.env.MAIN_EMAIL,
+            cc: setor.email_setor,
+            subject: emailSubject,
+            text: emailBody,
             customHeaders: {
-              "message-id-db": messageId,
+              "X-MyApp-MessageId": emailResponse.MessageId,
             },
           });
-          console.log("Email enviado. SES response:", emailToSetorResponse);
+          console.log("Email enviado. SES response:", emailResponse.MessageId);
+
+          // Aqui você pode atualizar o registro com o MessageId retornado pelo SES,
+          // caso deseje que o valor salvo no banco seja o MessageId do SES.
+          const updatedResult =
+            await kanbanCardsService.atualizaEmailData_Services(
+              result.createdMessage.id,
+              { message_id: emailResponse.MessageId }
+            );
+          console.log(
+            "Mensagem atualizada com MessageId do SES:",
+            updatedResult.updatedMessage
+          );
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
         }
-      } else {
-        return res.status(200).json({
-          card: result.card,
-          message: "E-mail não enviado",
-          error: false,
-        });
       }
       return res.status(200).json({
         card: result.card,
@@ -171,29 +175,47 @@ class KanbanCards_Controller extends Controller {
       // Envio de email com header customizado e atualização do registro
       if (user_email && isValidEmail(user_email)) {
         // Gere o Message-ID a partir do id já gerado (result.createdMessage.id)
-        const messageId = result.createdMessage.id;
+        // e formate-o conforme o padrão: <uniqueid@dominio>
+
+        const emailSubject = `Novo card criado: ${titulo_chamado}`;
+        const emailBodySetor = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
+        const emailBodyUser = `Seu chamado foi aberto para o setor ${setor.nome}.\n Logo um atendente entrara em contato.\n\nDescrição do chamado: ${descricao}`;
+
         try {
           // Envia o email definindo tanto o header customizado quanto o Message-ID padrão
+          const emailToSetorResponse = await sendEmailRaw({
+            to: [setor.email_setor, process.env.MAIN_EMAIL],
+            subject: emailSubject,
+            text: emailBodySetor,
+            // customHeaders: {
+            //   "message-id": formattedMessageId, // Header padrão que será usado pelos clientes de email
+            // },
+          });
+          console.log("Email enviado. SES response:", emailToSetorResponse);
           const emailToUsrResponse = await sendEmailRaw({
             to: user_email,
             cc: [process.env.MAIN_EMAIL],
-            subject: `Recebemos seu ${titulo_chamado}`,
-            text: `Olá ${usuario.usuario.nome}!\n\n.Logo um atendente entrara em contato com voce. ${setor.nome}.\n\nSeu chamado:: ${descricao}`,
-            customHeaders: {
-              "message-id-db": messageId,
-            },
+            subject: emailSubject,
+            text: emailBodyUser,
+            // customHeaders: {
+            //   "message-id": formattedMessageId, // Header padrão que será usado pelos clientes de email
+            // },
           });
           console.log("Email enviado. SES response:", emailToUsrResponse);
+          //pegando id da message enviada por email para o usuario e concatenando com o dominio do AWS SES para a validação na lambda comparar e atribuir os valores
+          const messageId = emailToUsrResponse.MessageId;
+          const formattedMessageId = `<${messageId}@sa-east-1.amazonses.com>`;
 
-          const emailToSetorResponse = await sendEmailRaw({
-            to: [setor.email_setor, process.env.MAIN_EMAIL],
-            subject: `Novo ${titulo_chamado} Setor - ${setor.nome}`,
-            text: `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`,
-            customHeaders: {
-              "message-id-db": messageId,
-            },
-          });
-          console.log("Email enviado. SES response:", emailToSetorResponse);
+          // Atualiza o registro com o MessageId retornado pelo SES, se necessário
+          const updatedResult =
+            await kanbanCardsService.atualizaEmailData_Services(
+              result.createdMessage.id,
+              { message_id: formattedMessageId }
+            );
+          console.log(
+            "Mensagem atualizada com MessageId do SES:",
+            formattedMessageId
+          );
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
         }
@@ -218,9 +240,8 @@ class KanbanCards_Controller extends Controller {
   // Método para atualizar os dados do email (rota consumida pela Lambda)
   async atualizaEmailData_Controller(req, res) {
     try {
-      // Payload esperado: {id, message_id, from_email, to_email, cc_email, bcc_email, subject, textBody, htmlBody, isReply }
+      // Payload esperado: { message_id, from_email, to_email, cc_email, bcc_email, subject, textBody, htmlBody, isReply }
       const {
-        id,
         message_id,
         from_email,
         to_email,
@@ -238,17 +259,19 @@ class KanbanCards_Controller extends Controller {
         });
       }
       // Atualiza os dados do email usando o serviço, buscando pelo id do registro
-      const result = await kanbanCardsService.atualizaEmailData_Services(id, {
+      const result = await kanbanCardsService.atualizaEmailData_Services(
         message_id,
-        from_email,
-        to_email,
-        cc_email,
-        bcc_email,
-        subject,
-        textBody: textBody,
-        htmlBody,
-        isReply,
-      });
+        {
+          from_email,
+          to_email,
+          cc_email,
+          bcc_email,
+          subject,
+          content_msg: textBody,
+          htmlBody,
+          isReply,
+        }
+      );
       if (result.error) {
         return res.status(400).json({ error: true, message: result.message });
       }
@@ -264,32 +287,28 @@ class KanbanCards_Controller extends Controller {
 
   async replyMessage_Controller(req, res) {
     try {
-      // Agora esperamos também message_id no payload (opcional)
-      const {
-        inReplyTo,
-        textBody,
-        message_id,
-        from_email,
-        htmlBody,
-        to_email,
-        cc_email,
-        bcc_email,
-        subject,
-        references,
-        identify_atendente,
-      } = req.body;
-      console.log(inReplyTo);
-      if (!inReplyTo || !textBody) {
+      /*
+        Exemplo de body esperado:
+        {
+          "original_message_id": "uuid-da-mensagem",
+          "content_msg": "Texto da resposta",
+          // se quiser, pode passar "usuario_id" ou "atendente_id"
+          // ou deduzir do token (req.user)
+        }
+      */
+      const { original_message_id, content_msg, atendente_id, cliente_id } =
+        req.body;
+      if (!original_message_id || !content_msg) {
         return res.status(400).json({
           error: true,
           message:
-            "Dados insuficientes (inReplyTo e textBody são obrigatórios).",
+            "Dados insuficientes (original_message_id e content_msg são obrigatórios).",
         });
       }
 
-      // 1. Localiza a mensagem original (usando o identificador que o sistema utiliza, por exemplo, o id gravado no DB)
+      // 1. Localiza a mensagem original
       const originalMsg = await kanbanCardsService.pegaMensagemPorId_Services(
-        inReplyTo
+        original_message_id
       );
       if (!originalMsg) {
         return res.status(404).json({
@@ -298,43 +317,12 @@ class KanbanCards_Controller extends Controller {
         });
       }
 
-      let cliente_id;
-      let atendente_id;
-      //quando solicitado do front é passado um usuario id para identificar o atendente_id
-      if (identify_atendente) {
-        const atendente = await devAgile.KanbanAtendenteHelpDesk.findOne({
-          where: { usuario_id: identify_atendente },
-        });
-        atendente_id = atendente.id;
-      } else {
-        cliente_id = originalMsg.cliente_id;
-      }
-
-      // console.log(textBody);
-      // console.log("atendente_id");
-      // console.log(atendente_id);
-      // console.log("cliente_id");
-      // console.log(cliente_id);
-      // console.log("message_id");
-      // console.log(message_id);
-      // console.log("htmlBody");
-      // console.log(htmlBody);
-
-      // 2. Cria a nova mensagem, vinculando-a à mensagem original
+      // 3. Cria a nova mensagem (in_reply_to = original_message_id)
       const newMessage = await kanbanCardsService.replyMessage_Services({
-        originalMsg, // dados da menssagem respondida
-        textBody, //corpo do email
+        originalMsg,
+        content_msg,
         atendente_id,
         cliente_id,
-        message_id, // repassa o message id do email que foi enviado, se existir
-        inReplyTo,
-        from_email,
-        htmlBody,
-        to_email,
-        cc_email,
-        bcc_email,
-        subject,
-        references,
       });
 
       if (newMessage.error) {
@@ -343,31 +331,36 @@ class KanbanCards_Controller extends Controller {
           .json({ error: true, message: newMessage.message });
       }
 
-      // 3. Envia notificação por email
-      // Se for resposta do atendente (no sistema), envia para o usuário
-      // Caso contrário, se for resposta do usuário, envia para o atendente/sector
+      //se o foi o atendente que mandou a menssagem, envia para o email cliente, caso contrario manda para o atendente
       if (atendente_id) {
         await sendEmailRaw({
-          to: originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
+          to: originalMsg.from_email,
           subject: `Re: Chamado #${originalMsg.sessao_id}`,
-          text: `Atendente respondeu: ${textBody}`,
+          text: `Atendente respondeu: ${content_msg}`,
+          // Se quiser HTML
+          // html: `<p>Atendente respondeu: ${content_msg}</p>`,
+          // Se a mensagem original tem "message_id" = <xxx@ses.amazonaws.com>
           inReplyTo: originalMsg.message_id,
           references: `<${originalMsg.message_id}>`,
           customHeaders: {
-            "message-id-db": newMessage.data.id, //usado para que na lambda a reposta consiga idenmtificar e atribuir o real id desse email no DB
+            "X-MyApp-MessageId": newMessage.data.id,
           },
         });
       } else {
-        // await sendEmailRaw({
-        //   to: originalMsg.from_email, // destinatário é o email do setor ou do atendente
-        //   subject: `Re: Chamado #${originalMsg.sessao_id}`,
-        //   text: `Usuário respondeu: ${textBody}`,
-        //   inReplyTo: originalMsg.message_id,
-        //   references: `<${originalMsg.message_id}>`,
-        //   customHeaders: {
-        //     "message-id-db": newMessage.data.id,
-        //   },
-        // });
+        // se foi o usuario que mandou a mensagem, envia para o atendente / setor
+        await sendEmailRaw({
+          to: originalMsg.from_email,
+          subject: `Re: Chamado #${originalMsg.sessao_id}`,
+          text: `Usuario respondeu: ${content_msg}`,
+          // Se quiser HTML
+          // html: `<p>Atendente respondeu: ${content_msg}</p>`,
+          // Se a mensagem original tem "message_id" = <xxx@ses.amazonaws.com>
+          inReplyTo: originalMsg.message_id,
+          references: `<${originalMsg.message_id}>`,
+          customHeaders: {
+            "X-MyApp-MessageId": newMessage.data.id,
+          },
+        });
       }
 
       return res.status(200).json({

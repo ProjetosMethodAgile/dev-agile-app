@@ -113,42 +113,25 @@ class KanbanCards_Services {
 
   async replyMessage_Services({
     originalMsg,
-    textBody,
+    content_msg,
     atendente_id,
     cliente_id,
-    inReplyTo,
-    from_email,
-    message_id,
-    htmlBody,
-    to_email,
-    cc_email,
-    bcc_email,
-    subject,
-    references,
   }) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
-      // Obtemos o sessao_id e o id da mensagem original (para vinculação via in_reply_to)
-      const { sessao_id } = originalMsg;
+      // Precisamos do sessao_id da mensagem original
+      // e do ID da mensagem original para 'in_reply_to'
+      const { sessao_id, id: originalId } = originalMsg;
 
       // Cria a nova mensagem
-      // Aqui, se email_message_id for fornecido, o armazenamos no campo message_id,
-      // garantindo que o email que originou a resposta seja identificado.
       const newMsg = await devAgile.KanbanSessoesMessages.create(
         {
           id: uuid.v4(),
           sessao_id,
           atendente_id: atendente_id || null,
           cliente_id: cliente_id || null,
-          content_msg: textBody,
-          in_reply_to: inReplyTo, // referencia a mensagem original
-          message_id: message_id || null, // grava o Message-ID do email, se existir
-          from_email: from_email || null,
-          to_email,
-          cc_email,
-          bcc_email,
-          subject,
-          references_email: references,
+          content_msg,
+          in_reply_to: originalId, // referencia a mensagem anterior
         },
         { transaction }
       );
@@ -167,32 +150,11 @@ class KanbanCards_Services {
     });
   }
 
-  async AddMessageId_Services(message_record_id, emailData) {
+  //consumido pela lambda para atualizar os dados da menssagem com informações que contem no arquivo .eml
+  async atualizaEmailData_Service(message_id, emailData) {
     try {
       const message = await devAgile.KanbanSessoesMessages.findOne({
-        where: { id: message_record_id },
-      });
-      if (!message) {
-        return { error: true, message: "Mensagem não encontrada" };
-      }
-      await message.update(emailData);
-      return {
-        error: false,
-        message: "Email atualizado com sucesso",
-        updatedMessage: message,
-      };
-    } catch (error) {
-      return {
-        error: true,
-        message: "Erro ao atualizar email: " + error.message,
-      };
-    }
-  }
-
-  async atualizaEmailData_Services(id, emailData) {
-    try {
-      const message = await devAgile.KanbanSessoesMessages.findOne({
-        where: { id: id },
+        where: { message_id },
       });
       if (!message) {
         return { error: true, message: "Mensagem não encontrada" };
@@ -293,20 +255,13 @@ class KanbanCards_Services {
                   "content_msg",
                   "createdAt",
                   "updatedAt",
-                  "message_id",
-                  "from_email",
-                  "to_email",
-                  "cc_email",
-                  "subject",
-                  "in_reply_to",
-                  "references_email",
                 ],
-                order: [["createdAt", "DESC"]],
+                order: [["createdAt", "ASC"]],
                 include: [
                   {
                     model: devAgile.Usuario,
                     as: "ClienteSessao",
-                    attributes: ["nome", "email"],
+                    attributes: ["nome"],
                   },
                   {
                     model: devAgile.KanbanAtendenteHelpDesk,
