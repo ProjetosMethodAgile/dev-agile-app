@@ -150,7 +150,7 @@ class KanbanCards_Services {
     });
   }
 
-  //consumido pela lambda para atualizar os dados da menssagem com informações que contem no arquivo .eml
+  //consumido pela lambda para atualizar os dados da menssagem com o email_id na clausula where informações que contem no arquivo .eml
   async atualizaEmailDataPorEmailID_Service(id, emailData) {
     try {
       const message = await devAgile.KanbanSessoesMessages.findOne({
@@ -173,6 +173,7 @@ class KanbanCards_Services {
     }
   }
 
+  //normalmente utilizado na criação do card para amarrar o email_id na menssagem antes de chegar na lambda
   async atualizaEmailDataPorID_Service(id, emailData) {
     try {
       const message = await devAgile.KanbanSessoesMessages.findOne({
@@ -272,6 +273,13 @@ class KanbanCards_Services {
                 model: devAgile.KanbanSessoesMessages,
                 as: "MessageSessao",
                 attributes: [
+                  "message_id",
+                  "references_email",
+                  "in_reply_to",
+                  "from_email",
+                  "to_email",
+                  "cc_email",
+                  "subject",
                   "atendente_id",
                   "cliente_id",
                   "content_msg",
@@ -283,7 +291,7 @@ class KanbanCards_Services {
                   {
                     model: devAgile.Usuario,
                     as: "ClienteSessao",
-                    attributes: ["nome"],
+                    attributes: ["nome", "email"],
                   },
                   {
                     model: devAgile.KanbanAtendenteHelpDesk,
