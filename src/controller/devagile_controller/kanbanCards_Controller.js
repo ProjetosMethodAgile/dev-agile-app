@@ -288,28 +288,32 @@ class KanbanCards_Controller extends Controller {
 
   async replyMessage_Controller(req, res) {
     try {
-      /*
-        Exemplo de body esperado:
-        {
-          "original_message_id": "uuid-da-mensagem",
-          "content_msg": "Texto da resposta",
-          // se quiser, pode passar "usuario_id" ou "atendente_id"
-          // ou deduzir do token (req.user)
-        }
-      */
-      const { original_message_id, content_msg, atendente_id, cliente_id } =
-        req.body;
-      if (!original_message_id || !content_msg) {
+      // Agora esperamos também message_id no payload (opcional)
+      const {
+        inReplyTo,
+        textBody,
+        message_id,
+        from_email,
+        htmlBody,
+        to_email,
+        cc_email,
+        bcc_email,
+        subject,
+        references,
+        identify_atendente,
+      } = req.body;
+      console.log(inReplyTo);
+      if (!inReplyTo || !textBody) {
         return res.status(400).json({
           error: true,
           message:
-            "Dados insuficientes (original_message_id e content_msg são obrigatórios).",
+            "Dados insuficientes (inReplyTo e textBody são obrigatórios).",
         });
       }
 
-      // 1. Localiza a mensagem original
+      // 1. Localiza a mensagem original (usando o identificador que o sistema utiliza, por exemplo, o id gravado no DB)
       const originalMsg = await kanbanCardsService.pegaMensagemPorId_Services(
-        original_message_id
+        inReplyTo
       );
       if (!originalMsg) {
         return res.status(404).json({
@@ -318,12 +322,43 @@ class KanbanCards_Controller extends Controller {
         });
       }
 
-      // 3. Cria a nova mensagem (in_reply_to = original_message_id)
+      let cliente_id;
+      let atendente_id;
+      //quando solicitado do front é passado um usuario id para identificar o atendente_id que respondeu
+      if (identify_atendente) {
+        const atendente = await devAgile.KanbanAtendenteHelpDesk.findOne({
+          where: { usuario_id: identify_atendente },
+        });
+        atendente_id = atendente.id;
+      } else {
+        cliente_id = originalMsg.cliente_id;
+      }
+
+      // console.log(textBody);
+      // console.log("atendente_id");
+      // console.log(atendente_id);
+      // console.log("cliente_id");
+      // console.log(cliente_id);
+      // console.log("message_id");
+      // console.log(message_id);
+      // console.log("htmlBody");
+      // console.log(htmlBody);
+
+      // 2. Cria a nova mensagem, vinculando-a à mensagem original
       const newMessage = await kanbanCardsService.replyMessage_Services({
-        originalMsg,
-        content_msg,
+        originalMsg, // dados da menssagem respondida
+        textBody, //corpo do email
         atendente_id,
         cliente_id,
+        message_id, // repassa o message id do email que foi enviado, se existir
+        inReplyTo,
+        from_email,
+        htmlBody,
+        to_email,
+        cc_email,
+        bcc_email,
+        subject,
+        references,
       });
 
       if (newMessage.error) {
@@ -332,36 +367,31 @@ class KanbanCards_Controller extends Controller {
           .json({ error: true, message: newMessage.message });
       }
 
-      //se o foi o atendente que mandou a menssagem, envia para o email cliente, caso contrario manda para o atendente
+      // 3. Envia notificação por email
+      // Se for resposta do atendente (no sistema), envia para o usuário
+      // Caso contrário, se for resposta do usuário, envia para o atendente/sector
       if (atendente_id) {
         await sendEmailRaw({
-          to: originalMsg.from_email,
+          to: originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
           subject: `Re: Chamado #${originalMsg.sessao_id}`,
-          text: `Atendente respondeu: ${content_msg}`,
-          // Se quiser HTML
-          // html: `<p>Atendente respondeu: ${content_msg}</p>`,
-          // Se a mensagem original tem "message_id" = <xxx@ses.amazonaws.com>
+          text: `Atendente respondeu: ${textBody}`,
           inReplyTo: originalMsg.message_id,
           references: `<${originalMsg.message_id}>`,
           customHeaders: {
-            "X-MyApp-MessageId": newMessage.data.id,
+            "message-id-db": newMessage.data.id, //usado para que na lambda a reposta consiga idenmtificar e atribuir o real id desse email no DB
           },
         });
       } else {
-        // se foi o usuario que mandou a mensagem, envia para o atendente / setor
-        await sendEmailRaw({
-          to: originalMsg.from_email,
-          subject: `Re: Chamado #${originalMsg.sessao_id}`,
-          text: `Usuario respondeu: ${content_msg}`,
-          // Se quiser HTML
-          // html: `<p>Atendente respondeu: ${content_msg}</p>`,
-          // Se a mensagem original tem "message_id" = <xxx@ses.amazonaws.com>
-          inReplyTo: originalMsg.message_id,
-          references: `<${originalMsg.message_id}>`,
-          customHeaders: {
-            "X-MyApp-MessageId": newMessage.data.id,
-          },
-        });
+        // await sendEmailRaw({
+        //   to: originalMsg.from_email, // destinatário é o email do setor ou do atendente
+        //   subject: `Re: Chamado #${originalMsg.sessao_id}`,
+        //   text: `Usuário respondeu: ${textBody}`,
+        //   inReplyTo: originalMsg.message_id,
+        //   references: `<${originalMsg.message_id}>`,
+        //   customHeaders: {
+        //     "message-id-db": newMessage.data.id,
+        //   },
+        // });
       }
 
       return res.status(200).json({

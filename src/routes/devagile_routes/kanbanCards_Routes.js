@@ -21,7 +21,7 @@ router.post("/api/helpdesk/card", (req, res) =>
 );
 
 // Nova rota para responder a uma mensagem
-router.post("/api/helpdesk/message/reply", checkTokenLogin, (req, res) =>
+router.post("/api/helpdesk/message/reply", (req, res) =>
   kanbanCards_controller.replyMessage_Controller(req, res)
 );
 
