@@ -174,20 +174,20 @@ class KanbanCards_Controller extends Controller {
         const messageId = result.createdMessage.id;
         try {
           // Envia o email definindo tanto o header customizado quanto o Message-ID padrão
-          const emailToSetorResponse = await sendEmailRaw({
-            to: [setor.email_setor, process.env.MAIN_EMAIL],
-            subject: `Novo ${titulo_chamado} Setor - ${setor.nome}`,
-            text: `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`,
-            customHeaders: {
-              "message-id-db": messageId,
-            },
-          });
           console.log("Email enviado. SES response:", emailToSetorResponse);
           const emailToUsrResponse = await sendEmailRaw({
             to: user_email,
             cc: [process.env.MAIN_EMAIL],
             subject: `Recebemos seu ${titulo_chamado}`,
             text: `Olá ${usuario.usuario.nome}!\n\n.Logo um atendente entrara em contato com voce. ${setor.nome}.\n\nSeu chamado:: ${descricao}`,
+            customHeaders: {
+              "message-id-db": messageId,
+            },
+          });
+          const emailToSetorResponse = await sendEmailRaw({
+            to: [setor.email_setor, process.env.MAIN_EMAIL],
+            subject: `Novo ${titulo_chamado} Setor - ${setor.nome}`,
+            text: `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`,
             customHeaders: {
               "message-id-db": messageId,
             },
