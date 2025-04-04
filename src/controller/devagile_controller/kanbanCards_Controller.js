@@ -331,13 +331,12 @@ class KanbanCards_Controller extends Controller {
           where: { usuario_id: identify_atendente },
         });
         atendente_id = atendente.id;
-      } else {
-        const cliente = await devAgile.Usuario.findOne({
-          where: { email: from_email },
-        });
-        if (cliente) {
-          cliente_id = cliente.id;
-        }
+      }
+      const cliente = await devAgile.Usuario.findOne({
+        where: { email: from_email },
+      });
+      if (cliente) {
+        cliente_id = cliente.id;
       }
 
       // console.log(textBody);
@@ -381,7 +380,7 @@ class KanbanCards_Controller extends Controller {
         const emailToUsrResponse = await sendEmailRaw({
           to: originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
           subject: emailSubjectUser,
-          text: `Atendente respondeu: \n\n${htmlBody}`,
+          text: `Atendente respondeu: \n\n${htmlBody ? htmlBody : textBody}`,
           inReplyTo: originalMsg.message_id,
           references: `<${originalMsg.message_id}>`,
           // customHeaders: {
