@@ -174,7 +174,6 @@ class KanbanCards_Controller extends Controller {
         const messageId = result.createdMessage.id;
         try {
           // Envia o email definindo tanto o header customizado quanto o Message-ID padrão
-          console.log("Email enviado. SES response:", emailToSetorResponse);
           const emailToUsrResponse = await sendEmailRaw({
             to: user_email,
             cc: [process.env.MAIN_EMAIL],
@@ -184,6 +183,8 @@ class KanbanCards_Controller extends Controller {
               "message-id-db": messageId,
             },
           });
+          console.log("Email enviado. SES response:", emailToUsrResponse);
+
           const emailToSetorResponse = await sendEmailRaw({
             to: [setor.email_setor, process.env.MAIN_EMAIL],
             subject: `Novo ${titulo_chamado} Setor - ${setor.nome}`,
@@ -192,7 +193,7 @@ class KanbanCards_Controller extends Controller {
               "message-id-db": messageId,
             },
           });
-          console.log("Email enviado. SES response:", emailToUsrResponse);
+          console.log("Email enviado. SES response:", emailToSetorResponse);
         } catch (emailError) {
           console.error("Erro ao enviar email via SES:", emailError);
         }
