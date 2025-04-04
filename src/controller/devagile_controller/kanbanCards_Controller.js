@@ -377,10 +377,16 @@ class KanbanCards_Controller extends Controller {
           text: `Atendente respondeu: ${textBody}`,
           inReplyTo: originalMsg.message_id,
           references: `<${originalMsg.message_id}>`,
-          customHeaders: {
-            "message-id-db": newMessage.data.id, //usado para que na lambda a reposta consiga idenmtificar e atribuir o real id desse email no DB
-          },
+          // customHeaders: {
+          //   "message-id-db": newMessage.data.id, //usado para que na lambda a reposta consiga idenmtificar e atribuir o real id desse email no DB
+          // },
         });
+        // Atualiza o registro com o MessageId retornado pelo SES, se necessário
+        const updatedResult =
+          await kanbanCardsService.atualizaEmailDataPorID_Service(
+            newMessage.data.id,
+            { message_id: formattedMessageId }
+          );
       } else {
         // await sendEmailRaw({
         //   to: originalMsg.from_email, // destinatário é o email do setor ou do atendente
