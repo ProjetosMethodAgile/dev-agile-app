@@ -87,7 +87,7 @@ class KanbanCards_Controller extends Controller {
           // Aqui você pode atualizar o registro com o MessageId retornado pelo SES,
           // caso deseje que o valor salvo no banco seja o MessageId do SES.
           const updatedResult =
-            await kanbanCardsService.atualizaEmailData_Service(
+            await kanbanCardsService.atualizaEmailDataPorID_Service(
               result.createdMessage.id,
               { message_id: emailResponse.MessageId }
             );
@@ -208,7 +208,7 @@ class KanbanCards_Controller extends Controller {
 
           // Atualiza o registro com o MessageId retornado pelo SES, se necessário
           const updatedResult =
-            await kanbanCardsService.atualizaEmailData_Service(
+            await kanbanCardsService.atualizaEmailDataPorID_Service(
               result.createdMessage.id,
               { message_id: formattedMessageId }
             );
@@ -259,19 +259,20 @@ class KanbanCards_Controller extends Controller {
         });
       }
       // Atualiza os dados do email usando o serviço, buscando pelo id do registro
-      const result = await kanbanCardsService.atualizaEmailData_Service(
-        message_id,
-        {
-          from_email,
-          to_email,
-          cc_email,
-          bcc_email,
-          subject,
-          content_msg: textBody,
-          htmlBody,
-          isReply,
-        }
-      );
+      const result =
+        await kanbanCardsService.atualizaEmailDataPorEmailID_Service(
+          message_id,
+          {
+            from_email,
+            to_email,
+            cc_email,
+            bcc_email,
+            subject,
+            content_msg: textBody,
+            htmlBody,
+            isReply,
+          }
+        );
       if (result.error) {
         return res.status(400).json({ error: true, message: result.message });
       }
