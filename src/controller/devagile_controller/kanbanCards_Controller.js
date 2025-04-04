@@ -258,7 +258,7 @@ class KanbanCards_Controller extends Controller {
           message: "message_id é obrigatório",
         });
       }
-      // Atualiza os dados do email usando o serviço, buscando pelo id do registro
+      // Atualiza os dados do email usando o serviço, buscando pelo email_id do registro
       const result =
         await kanbanCardsService.atualizaEmailDataPorEmailID_Service(
           message_id,
