@@ -150,10 +150,11 @@ class KanbanCards_Services {
     });
   }
 
-  async atualizaEmailData_Services(message_record_id, emailData) {
+  //consumido pela lambda para atualizar os dados da menssagem com informações que contem no arquivo .eml
+  async atualizaEmailData_Service(message_id, emailData) {
     try {
       const message = await devAgile.KanbanSessoesMessages.findOne({
-        where: { id: message_record_id },
+        where: { message_id },
       });
       if (!message) {
         return { error: true, message: "Mensagem não encontrada" };

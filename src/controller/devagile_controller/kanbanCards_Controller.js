@@ -176,33 +176,35 @@ class KanbanCards_Controller extends Controller {
       if (user_email && isValidEmail(user_email)) {
         // Gere o Message-ID a partir do id já gerado (result.createdMessage.id)
         // e formate-o conforme o padrão: <uniqueid@dominio>
-        const messageId = result.createdMessage.id;
-        const formattedMessageId = `<${messageId}@devagile.com>`;
 
         const emailSubject = `Novo card criado: ${titulo_chamado}`;
-        const emailBody = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
+        const emailBodySetor = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
+        const emailBodyUser = `Seu chamado foi aberto para o setor ${setor.nome}.\n Logo um atendente entrara em contato.\n\nDescrição do chamado: ${descricao}`;
 
         try {
           // Envia o email definindo tanto o header customizado quanto o Message-ID padrão
           const emailToSetorResponse = await sendEmailRaw({
             to: [setor.email_setor, process.env.MAIN_EMAIL],
             subject: emailSubject,
-            text: emailBody,
-            customHeaders: {
-              "Message-ID": formattedMessageId, // Header padrão que será usado pelos clientes de email
-            },
+            text: emailBodySetor,
+            // customHeaders: {
+            //   "message-id": formattedMessageId, // Header padrão que será usado pelos clientes de email
+            // },
           });
           console.log("Email enviado. SES response:", emailToSetorResponse);
           const emailToUsrResponse = await sendEmailRaw({
             to: user_email,
             cc: [process.env.MAIN_EMAIL],
             subject: emailSubject,
-            text: emailBody,
-            customHeaders: {
-              "Message-ID": formattedMessageId, // Header padrão que será usado pelos clientes de email
-            },
+            text: emailBodyUser,
+            // customHeaders: {
+            //   "message-id": formattedMessageId, // Header padrão que será usado pelos clientes de email
+            // },
           });
           console.log("Email enviado. SES response:", emailToUsrResponse);
+          //pegando id da message enviada por email para o usuario e concatenando com o dominio do AWS SES para a validação na lambda comparar e atribuir os valores
+          const messageId = emailToUsrResponse.MessageId;
+          const formattedMessageId = `<${messageId}@sa-east-1.amazonses.com>`;
 
           // Atualiza o registro com o MessageId retornado pelo SES, se necessário
           const updatedResult =
