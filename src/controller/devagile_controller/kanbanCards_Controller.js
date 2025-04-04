@@ -178,6 +178,7 @@ class KanbanCards_Controller extends Controller {
         // e formate-o conforme o padrão: <uniqueid@dominio>
 
         const emailSubject = `Novo card criado: ${titulo_chamado}`;
+        const emailSubjectUser = `Seu chamado foi aberto! - ${titulo_chamado}`;
         const emailBodySetor = `Um novo card foi criado no setor ${setor.nome}.\n\nDescrição: ${descricao}`;
         const emailBodyUser = `Seu chamado foi aberto para o setor ${setor.nome}.\n Logo um atendente entrara em contato.\n\nDescrição do chamado: ${descricao}`;
 
@@ -195,7 +196,7 @@ class KanbanCards_Controller extends Controller {
           const emailToUsrResponse = await sendEmailRaw({
             to: user_email,
             cc: [process.env.MAIN_EMAIL],
-            subject: emailSubject,
+            subject: emailSubjectUser,
             text: emailBodyUser,
             // customHeaders: {
             //   "message-id": formattedMessageId, // Header padrão que será usado pelos clientes de email
@@ -331,7 +332,12 @@ class KanbanCards_Controller extends Controller {
         });
         atendente_id = atendente.id;
       } else {
-        cliente_id = originalMsg.cliente_id;
+        const cliente = await devAgile.Usuario.findOne({
+          where: { email: from_email },
+        });
+        if (cliente) {
+          cliente_id = cliente.id;
+        }
       }
 
       // console.log(textBody);
@@ -371,10 +377,11 @@ class KanbanCards_Controller extends Controller {
       // Se for resposta do atendente (no sistema), envia para o usuário
       // Caso contrário, se for resposta do usuário, envia para o atendente/sector
       if (atendente_id) {
+        const emailSubjectUser = `Re: ${originalMsg.subject}`;
         const emailToUsrResponse = await sendEmailRaw({
           to: originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
-          subject: `Re: Chamado #${originalMsg.sessao_id}`,
-          text: `Atendente respondeu: ${textBody}`,
+          subject: emailSubjectUser,
+          text: `Atendente respondeu: \n\n${htmlBody}`,
           inReplyTo: originalMsg.message_id,
           references: `<${originalMsg.message_id}>`,
           // customHeaders: {
