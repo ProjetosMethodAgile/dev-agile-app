@@ -8,6 +8,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "id_acao",
         as: "AcoesColumn",
       });
+      
+      KanbanAcoes.belongsToMany(models.Empresa, {
+        through: models.KanbanAcaoEmpresa,
+        foreignKey: "empresa_id",
+        as: "kanbanAcaoEmpresas",
+      });
     }
   }
   KanbanAcoes.init(
