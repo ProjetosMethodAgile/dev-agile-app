@@ -383,13 +383,16 @@ class KanbanCards_Controller extends Controller {
       // Se for resposta do atendente (no sistema), envia para o usuário
       // Caso contrário, se for resposta do usuário, envia para o atendente/sector
       if (atendente_id) {
+        console.log("atendente aqui");
+        console.log(atendente_id);
+
         const emailSubjectUser = `Re: ${originalMsg.subject}`;
         const emailToUsrResponse = await sendEmailRaw({
           to: originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
           subject: emailSubjectUser,
           text: `Atendente respondeu: \n\n${htmlBody ? htmlBody : textBody}`,
           inReplyTo: originalMsg.message_id,
-          references: `<${originalMsg.message_id}>`,
+          references: `${references}`,
           // customHeaders: {
           //   "message-id-db": newMessage.data.id, //usado para que na lambda a reposta consiga idenmtificar e atribuir o real id desse email no DB
           // },
@@ -404,7 +407,14 @@ class KanbanCards_Controller extends Controller {
         const updatedResult =
           await kanbanCardsService.atualizaEmailDataPorID_Service(
             newMessage.data.id,
-            { message_id: formattedMessageId }
+            {
+              message_id: formattedMessageId,
+              from_email,
+              subject: emailSubjectUser,
+              inReplyTo: originalMsg.message_id,
+              references: references,
+              to_email,
+            }
           );
       } else {
         // await sendEmailRaw({
