@@ -222,6 +222,25 @@ class Usuario_Controller extends Controller {
     }
   }
 
+  async pegaUsuariosPorEmpId_Controller(req, res) {
+    const { id } = req.params;
+    try {
+      const usuario = await usuario_services.pegaUsuariosPorEmpId_Services(id);
+      if (!usuario.status) {
+        return res
+          .status(400)
+          .json({ message: "Usuários não encontrado nesta empresa", error: true });
+      }
+      return res.status(200).json(usuario);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        message: "Erro ao buscar registro, contate o administrador do sistema",
+      });
+    }
+  }
+
+
   async atualizaUsuario_Controller(req, res) {
     const { id } = req.params;
     const {
@@ -307,3 +326,5 @@ class Usuario_Controller extends Controller {
 }
 
 module.exports = Usuario_Controller;
+
+

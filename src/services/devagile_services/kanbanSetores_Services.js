@@ -12,11 +12,66 @@ class KanbanSetores_Services extends Services {
     try {
       const setores = await devAgile[this.nomeModel].findAll({
         where: { empresa_id },
+        include: [
+          {
+            model: devAgile.KanbanAtendenteHelpDesk,
+            as: "Atendentes",
+            through: { attributes: [] }, // se quiser ocultar os dados da tabela de junção
+            attributes: ["id", "empresa_id"],
+            include: [
+              {
+                model: devAgile.Usuario,
+                as: "UsuarioAtendente", // certifique-se de que este alias corresponde à associação definida
+                attributes: ["nome"],
+              },
+            ],
+          },
+        ],
       });
       return { error: false, setores };
     } catch (err) {
       console.error("Erro ao buscar setores por empresa:", err);
       return { error: true, message: "Erro ao buscar setores" };
+    }
+  }
+
+  async pegaSetorPorUsrAndEmp_Services(empid, usrid) {
+    try {
+      const empresa = await devAgile.Empresa.findOne({ where: { id: empid } });
+      const usuario = await devAgile.KanbanAtendenteHelpDesk.findOne({
+        where: { usuario_id: usrid },
+
+        attributes: ["id"],
+
+        include: [
+          {
+            model: devAgile.Usuario,
+            as: "UsuarioAtendente",
+            attributes: ["id", "nome", "email", "contato"],
+          },
+          {
+            model: devAgile["KanbanSetores"],
+            as: "Setores",
+            through: { attributes: [] },
+          },
+        ],
+      });
+
+      if (!empresa || !usuario) {
+        return {
+          ok: false,
+          message:
+            "erro ao consultar dados, contate o administrador do sistema",
+        };
+      }
+
+      return { ok: true, atendente: usuario };
+    } catch (error) {
+      console.log(error);
+      return {
+        ok: false,
+        message: "erro ao consultar dados, contate o administrador do sistema",
+      };
     }
   }
 
@@ -27,6 +82,7 @@ class KanbanSetores_Services extends Services {
         id: uuid.v4(),
         empresa_id: dados.empresa_id, // vincula o setor à empresa
         nome: dados.nome,
+        email_setor: dados.email_setor, // <-- adicionando a coluna
       });
       return { error: false, setor: novoSetor };
     } catch (err) {

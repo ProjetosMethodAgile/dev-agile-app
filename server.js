@@ -1,19 +1,22 @@
-require("dotenv").config(); // Carrega as variáveis de ambiente do arquivo .env
 
-const app = require("./src/app.js"); // Importa a aplicação Express
+// server.js
+require("dotenv").config();
+const fs = require("fs");
+const https = require("https");
+const app = require("./src/app.js");
+const { initWsServer } = require("./src/websocket.js");
 
 const PORT = 3001;
-// const https = require("https");
+const httpsOptions = {
+  key: fs.readFileSync("/etc/letsencrypt/live/devagile.com.br/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/devagile.com.br/fullchain.pem"),
+};
 
-// const fs = require("fs");
+const server = https.createServer(httpsOptions, app);
 
-// const httpsOptions = {
-//   key: fs.readFileSync("/etc/letsencrypt/live/devagile.com.br/privkey.pem"),
-//   cert: fs.readFileSync("/etc/letsencrypt/live/devagile.com.br/fullchain.pem"),
-// };
+// Inicializa o WebSocket com path '/api/socket'
+initWsServer(server);
 
-// const server = https.createServer(httpsOptions, app);
-
-app.listen(PORT, () => {
-  console.log("servidor de aplicação ligado na porta " + PORT);
+server.listen(PORT, () => {
+  console.log(`Servidor HTTPS rodando na porta ${PORT}`);
 });

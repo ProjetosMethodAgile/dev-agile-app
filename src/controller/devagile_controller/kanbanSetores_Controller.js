@@ -18,10 +18,42 @@ class KanbanSetores_Controller {
     return res.status(200).json(result.setores);
   }
 
+  async pegaSetorPorUsrAndEmp_Controller(req, res) {
+    try {
+      const { emp_id, usr_id } = req.params;
+
+      if (!emp_id || !usr_id) {
+        return res
+          .status(404)
+          .json({ error: true, message: "preencha os dados necessarios" });
+      }
+      const setoreslist =
+        await this.kanbanSetoresService.pegaSetorPorUsrAndEmp_Services(
+          emp_id,
+          usr_id
+        );
+
+      if (!setoreslist.ok) {
+        return res.status(404).json({
+          error: true,
+          message: setoreslist.message,
+        });
+      }
+      return res.status(200).json(setoreslist.atendente);
+    } catch (error) {
+      console.log(error);
+      return res.status(404).json({
+        error: true,
+        message: "erro ao consultar dados, contate o administrador do sistema",
+      });
+    }
+  }
+
   // Cria um novo setor
   async criaSetor_Controller(req, res) {
-    const dados = req.body; // espera receber { empresa_id, nome }
+    const dados = req.body;
     const result = await this.kanbanSetoresService.criaSetor_Services(dados);
+
     if (result.error) {
       return res.status(500).json({ error: true, message: result.message });
     }
