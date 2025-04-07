@@ -270,7 +270,7 @@ class KanbanCards_Controller extends Controller {
             cc_email,
             bcc_email,
             subject,
-            content_msg: textBody,
+            // content_msg: textBody,
             htmlBody,
             isReply,
           }
