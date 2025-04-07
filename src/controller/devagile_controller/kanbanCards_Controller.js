@@ -331,12 +331,13 @@ class KanbanCards_Controller extends Controller {
           where: { usuario_id: identify_atendente },
         });
         atendente_id = atendente.id;
-      }
-      const cliente = await devAgile.Usuario.findOne({
-        where: { email: from_email },
-      });
-      if (cliente) {
-        cliente_id = cliente.id;
+      } else {
+        const cliente = await devAgile.Usuario.findOne({
+          where: { email: from_email },
+        });
+        if (cliente) {
+          cliente_id = cliente.id;
+        }
       }
 
       // console.log(textBody);
