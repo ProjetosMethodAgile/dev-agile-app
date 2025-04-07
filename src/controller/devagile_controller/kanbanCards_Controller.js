@@ -4,6 +4,7 @@ const KanbanSetores_Services = require("../../services/devagile_services/kanbanS
 const Usuario_Services = require("../../services/devagile_services/Usuario_Services");
 const { sendEmailRaw } = require("../../utils/sendEmailRaw");
 const Controller = require("../Controller");
+const ws = require("../../websocket.js");
 
 const kanbanCardsService = new KanbanCards_Services();
 const usuarioServices = new Usuario_Services();
@@ -277,6 +278,8 @@ class KanbanCards_Controller extends Controller {
       if (result.error) {
         return res.status(400).json({ error: true, message: result.message });
       }
+      ws.broadcast({ type: `cardUpdated` });
+
       return res.status(200).json({
         error: false,
         message: result.message,
@@ -415,6 +418,7 @@ class KanbanCards_Controller extends Controller {
         //   },
         // });
       }
+      ws.broadcast({ type: `cardUpdated` });
 
       return res.status(200).json({
         error: false,
