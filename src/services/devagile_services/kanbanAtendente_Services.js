@@ -35,6 +35,23 @@ class KanbanAtendente_Services extends Services {
     }
   }
 
+  async vinculaAtendenteToCard_Services(atendente_id, sessao_id) {
+    let vinculo;
+    try {
+      vinculo = await devAgile.KanbanSessoesAtendentes.create({
+        id: uuid.v4(),
+        sessao_id,
+        atendente_id,
+        visualizacao_atendente: true,
+      });
+
+      return { vinculo, error: false };
+    } catch (error) {
+      console.log(error);
+      return { vinculo, error: true };
+    }
+  }
+
   // Consulta um atendente pelo ID, incluindo os setores vinculados
   async consultaAtendente_Services(id) {
     try {

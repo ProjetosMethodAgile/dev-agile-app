@@ -257,6 +257,15 @@ class KanbanCards_Services {
             model: devAgile.KanbanSessoes,
             as: "CardSessao",
             attributes: ["id"],
+            include: [
+              {
+                model: devAgile.KanbanAtendenteHelpDesk,
+                as: "atendentesVinculados",
+                attributes: ["createdAt"],
+
+                include: [],
+              },
+            ],
           },
         ],
       });
@@ -335,7 +344,7 @@ class KanbanCards_Services {
             include: [
               {
                 model: devAgile.KanbanAtendenteHelpDesk,
-                as: "SessaoAtendenteID",
+                as: "atendentesVinculados",
                 attributes: [],
                 through: {
                   attributes: [
