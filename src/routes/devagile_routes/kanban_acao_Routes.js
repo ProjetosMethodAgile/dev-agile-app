@@ -6,9 +6,10 @@ const authorize = require("../../middlewares/authorize.js");
 const kanabn_acao_controller = new Kanban_Acao_Controller();
 const route = Router();
 
-route.post("/api/acoes-tela", checkTokenLogin, (req, res) =>
-  acaoTela_controller.criaAcaoTela_Controller(req, res)
+route.post("/api/helpdesk/acoes/register", checkTokenLogin, (req, res) =>
+  kanabn_acao_controller.criaAcaoKanban_controller(req, res)
 );
+
 
 route.get(
   "/api/helpdesk/acoes",

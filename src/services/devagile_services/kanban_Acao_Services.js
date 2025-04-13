@@ -10,14 +10,41 @@ class kanban_Acao_Services extends Services {
   async pegaTodoskanban_Acao_Services() {
     return await devAgile[this.nomeModel].findAll();
   }
+  async criaAcaoKanban_Services(dados) {
+    try {
+      return await devAgile[this.nomeModel].create({
+        id: uuid.v4(),
+        nome: dados.nome,
+        descricao: dados.descricao
+      });
+    } catch (err) {
+      console.error("Erro ao criar motivo:", err);
+      return { error: true, message: "Erro ao criar motivo" };
+    }
+  }
+
+
+  async validaAcaoID(id){
+    try {
+        return devAgile[this.nomeModel].findOne({
+          where:{id}
+        })
+      }
+      catch (err) {
+        console.error("Erro ao localizar id acao:", err);
+        return { error: true, message: "Erro ao localizar id ação" };
+      }
+  }
 
   async pegaTodosAcaoEmpresa_Services(id) {
-    return devAgile[this.nomeModel].findOne({include:[
-      {
-        model: devAgile.Empresa,
-        as: 'kanbanAcaoEmpresas'
-      }
-    ]});
+    return devAgile[this.nomeModel].findOne({
+      include: [
+        {
+          model: devAgile.Empresa,
+          as: "kanbanAcaoEmpresas",
+        },
+      ],
+    });
   }
 }
 
