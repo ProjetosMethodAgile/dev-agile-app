@@ -4,6 +4,7 @@ const KanbanSetores_Services = require("../../services/devagile_services/kanbanS
 const Usuario_Services = require("../../services/devagile_services/Usuario_Services");
 const { sendEmailRaw } = require("../../utils/sendEmailRaw");
 const Controller = require("../Controller");
+const ws = require("../../websocket.js");
 
 const kanbanCardsService = new KanbanCards_Services();
 const usuarioServices = new Usuario_Services();
@@ -269,7 +270,7 @@ class KanbanCards_Controller extends Controller {
             cc_email,
             bcc_email,
             subject,
-            content_msg: textBody,
+            // content_msg: textBody,
             htmlBody,
             isReply,
           }
@@ -277,6 +278,8 @@ class KanbanCards_Controller extends Controller {
       if (result.error) {
         return res.status(400).json({ error: true, message: result.message });
       }
+      ws.broadcast({ type: `cardUpdated` });
+
       return res.status(200).json({
         error: false,
         message: result.message,
@@ -331,12 +334,16 @@ class KanbanCards_Controller extends Controller {
           where: { usuario_id: identify_atendente },
         });
         atendente_id = atendente.id;
-      }
-      const cliente = await devAgile.Usuario.findOne({
-        where: { email: from_email },
-      });
-      if (cliente) {
-        cliente_id = cliente.id;
+      } else {
+        const cliente = await devAgile.Usuario.findOne({
+          where: { email: from_email },
+        });
+        console.log(cliente);
+        if (cliente) {
+          cliente_id = cliente.id;
+          console.log("cliente_id");
+          console.log(cliente_id);
+        }
       }
 
       // console.log(textBody);
@@ -376,13 +383,16 @@ class KanbanCards_Controller extends Controller {
       // Se for resposta do atendente (no sistema), envia para o usuário
       // Caso contrário, se for resposta do usuário, envia para o atendente/sector
       if (atendente_id) {
+        console.log("atendente aqui");
+        console.log(atendente_id);
+
         const emailSubjectUser = `Re: ${originalMsg.subject}`;
         const emailToUsrResponse = await sendEmailRaw({
           to: originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
           subject: emailSubjectUser,
           text: `Atendente respondeu: \n\n${htmlBody ? htmlBody : textBody}`,
           inReplyTo: originalMsg.message_id,
-          references: `<${originalMsg.message_id}>`,
+          references: `${references}`,
           // customHeaders: {
           //   "message-id-db": newMessage.data.id, //usado para que na lambda a reposta consiga idenmtificar e atribuir o real id desse email no DB
           // },
@@ -397,7 +407,14 @@ class KanbanCards_Controller extends Controller {
         const updatedResult =
           await kanbanCardsService.atualizaEmailDataPorID_Service(
             newMessage.data.id,
-            { message_id: formattedMessageId }
+            {
+              message_id: formattedMessageId,
+              from_email,
+              subject: emailSubjectUser,
+              inReplyTo: originalMsg.message_id,
+              references: references,
+              to_email,
+            }
           );
       } else {
         // await sendEmailRaw({
@@ -411,6 +428,7 @@ class KanbanCards_Controller extends Controller {
         //   },
         // });
       }
+      ws.broadcast({ type: `cardUpdated` });
 
       return res.status(200).json({
         error: false,

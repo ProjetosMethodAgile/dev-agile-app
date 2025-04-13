@@ -251,9 +251,68 @@ class KanbanCards_Services {
       const columnIds = columns.map((c) => c.id);
       const cards = await devAgile.KanbanCards.findAll({
         where: { column_id: { [Op.in]: columnIds } },
-        include: [{ model: devAgile.KanbanComlumns, as: "ColumnsCard" }],
+        include: [
+          { model: devAgile.KanbanComlumns, as: "ColumnsCard" },
+          {
+            model: devAgile.KanbanSessoes,
+            as: "CardSessao",
+            attributes: ["id"],
+          },
+        ],
       });
-      return cards;
+
+      // Extraia os IDs das sessões de cada card
+      const sessionIds = cards
+        .filter((card) => card.CardSessao) // garante que CardSessao exista
+        .map((card) => card.CardSessao.id);
+
+      // Consulta agregada para contar mensagens e anexos por sessão
+      const messagesAndAttachments =
+        await devAgile.KanbanSessoesMessages.findAll({
+          attributes: [
+            "sessao_id",
+            // Conta quantas mensagens únicas existem por sessão
+            [
+              sequelizeDevAgileCli.literal(
+                'COUNT(DISTINCT "KanbanSessoesMessages"."id")'
+              ),
+              "messagesCount",
+            ],
+            // Conta quantos anexos únicos existem por sessão (via join com Attachments)
+            [
+              sequelizeDevAgileCli.literal(
+                'COUNT(DISTINCT "Attachments"."id")'
+              ),
+              "attachmentsCount",
+            ],
+          ],
+          where: { sessao_id: { [Op.in]: sessionIds } },
+          include: [
+            {
+              model: devAgile.KanbanSessoesMessagesAttachments,
+              as: "Attachments",
+              attributes: [], // Não traz atributos dos anexos; serve só para o join
+            },
+          ],
+          group: ["sessao_id"],
+          raw: true,
+        });
+
+      // Agora, o objeto messagesAndAttachments conterá para cada sessao_id
+      // a quantidade de mensagens (messagesCount) e de anexos (attachmentsCount)
+      const cardsWithCounts = cards.map((card) => {
+        const sessaoId = card.CardSessao?.id;
+        const countInfo = messagesAndAttachments.find(
+          (info) => info.sessao_id === sessaoId
+        );
+        return {
+          ...card.toJSON(),
+          messagesCount: countInfo ? countInfo.messagesCount : 0,
+          attachmentsCount: countInfo ? countInfo.attachmentsCount : 0,
+        };
+      });
+
+      return cardsWithCounts;
     } catch (error) {
       throw new Error("Erro ao buscar cards: " + error.message);
     }
