@@ -9,7 +9,6 @@ const PORT = 3001;
 const httpsOptions = {
  key: fs.readFileSync("/etc/letsencrypt/live/devagile.com.br/privkey.pem"),
   cert: fs.readFileSync("/etc/letsencrypt/live/devagile.com.br/fullchain.pem"), 
-
 };
 
 
