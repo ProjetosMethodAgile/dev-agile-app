@@ -386,16 +386,16 @@ class KanbanCards_Controller extends Controller {
         console.log("atendente aqui");
         console.log(atendente_id);
 
-        const emailSubjectUser = `Re: ${originalMsg.subject}`;
+        const originalSubject = originalMsg.subject.trim();
+        const emailSubjectUser = originalSubject.toLowerCase().startsWith("re:")
+          ? originalSubject
+          : `Re: ${originalSubject}`;
         const emailToUsrResponse = await sendEmailRaw({
           to: originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
           subject: emailSubjectUser,
           text: `Atendente respondeu: \n\n${htmlBody ? htmlBody : textBody}`,
           inReplyTo: originalMsg.message_id,
           references: `${references}`,
-          // customHeaders: {
-          //   "message-id-db": newMessage.data.id, //usado para que na lambda a reposta consiga idenmtificar e atribuir o real id desse email no DB
-          // },
         });
 
         console.log("Email respondido. SES response:", emailToUsrResponse);
@@ -428,7 +428,9 @@ class KanbanCards_Controller extends Controller {
         //   },
         // });
       }
-      ws.broadcast({ type: `cardUpdated` });
+      console.log(newMessage.data);
+
+      ws.broadcast({ type: `messageUpdate-${newMessage.data.sessao_id}` });
 
       return res.status(200).json({
         error: false,
