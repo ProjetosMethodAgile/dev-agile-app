@@ -12,14 +12,24 @@ class kanban_Acao_Services extends Services {
   }
   async criaAcaoKanban_Services(dados) {
     try {
-      return await devAgile[this.nomeModel].create({
+      const acao =  await devAgile[this.nomeModel].create({
         id: uuid.v4(),
         nome: dados.nome,
         descricao: dados.descricao
       });
+      
+      const vinculaAcaoEmpID = await devAgile.KanbanAcaoEmpresa.create({
+        id: uuid.v4(),
+        empresa_id: dados.empID,
+        kanban_acao_id: acao.dataValues.id,
+      });
+      
+
+      return { error: false, message: "Cadastro realizado com sucesso" };
+
     } catch (err) {
-      console.error("Erro ao criar motivo:", err);
-      return { error: true, message: "Erro ao criar motivo" };
+      console.error("Erro ao criar ação:", err);
+      return { error: true, message: "Erro ao criar Ação" };
     }
   }
 
@@ -37,15 +47,17 @@ class kanban_Acao_Services extends Services {
   }
 
   async pegaTodosAcaoEmpresa_Services(id) {
-    return devAgile[this.nomeModel].findOne({
-      include: [
-        {
-          model: devAgile.Empresa,
-          as: "kanbanAcaoEmpresas",
-        },
-      ],
+    return await devAgile.KanbanAcaoEmpresa.findAll({
+      where:{empresa_id:id},
+      attributes:['kanban_acao_id'],
+      include:[{
+        model: devAgile.KanbanAcoes, as: 'kanban_empresa_por_acao'
+      }]
+    
     });
   }
+  
+  
 }
 
 module.exports = kanban_Acao_Services;

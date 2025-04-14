@@ -5,9 +5,8 @@ module.exports = {
     await queryInterface.createTable("kanban_acao_empresa", {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
       },
       empresa_id: {
         type: Sequelize.UUID,
