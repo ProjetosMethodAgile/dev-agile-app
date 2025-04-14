@@ -1,4 +1,4 @@
-const { devAgile } = require("../../models/index.js");
+const { devAgile, sequelizeDevAgileCli } = require("../../models/index.js");
 const Services = require("../Services");
 const uuid = require("uuid");
 
@@ -16,25 +16,29 @@ class KanbanColumn_Services extends Services {
   }
 
   async cadastraColumn_Service(nome, posicao, setor_id, id_acao) {
+    const transaction = await sequelizeDevAgileCli.transaction();
     try {
       const column = await devAgile.KanbanComlumns.create({
         id: uuid.v4(),
         nome,
         posicao,
         setor_id,
-      });
+      },
+      { transaction }
+    );
     
 
       const columnNow =  await devAgile.KanbanColumnAcoes.create({
         id: uuid.v4(),
         id_column: column.dataValues.id,
         id_acao: id_acao,
-      })
+      },
+      { transaction })
 
-    
-
+      await transaction.commit();
       return { error: false, message: "Cadastro realizado com sucesso" };
     } catch (err) {
+      await transaction.rollback();
       return {
         error: true,
         message: "Erro ao cadastrar coluna: " + err.message,

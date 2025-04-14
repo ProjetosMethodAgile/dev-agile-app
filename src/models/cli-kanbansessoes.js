@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
       KanbanSessoes.belongsToMany(models.KanbanAtendenteHelpDesk, {
         through: models.KanbanSessoesAtendentes,
         foreignKey: "sessao_id",
-        as: "SessaoAtendenteID",
+        as: "atendentesVinculados",
       });
 
       KanbanSessoes.hasMany(models.KanbanSessoesMessages, {
