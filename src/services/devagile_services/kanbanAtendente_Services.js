@@ -55,7 +55,7 @@ class KanbanAtendente_Services extends Services {
   // Consulta um atendente pelo ID, incluindo os setores vinculados
   async consultaAtendente_Services(id) {
     try {
-      const atendente = await devAgile[this.nomeModel].findByPk(id, {
+      const atendente = await devAgile[this.nomeModel].findOne({
         include: [
           {
             model: devAgile["KanbanSetores"],
@@ -65,6 +65,7 @@ class KanbanAtendente_Services extends Services {
           {
             model: devAgile.Usuario,
             as: "UsuarioAtendente",
+            where: { id },
           },
         ],
       });

@@ -262,8 +262,13 @@ class KanbanCards_Services {
                 model: devAgile.KanbanAtendenteHelpDesk,
                 as: "atendentesVinculados",
                 attributes: ["createdAt"],
-
-                include: [],
+                include: [
+                  {
+                    model: devAgile.Usuario,
+                    as: "UsuarioAtendente",
+                    attributes: ["nome", "email", "contato"],
+                  },
+                ],
               },
             ],
           },

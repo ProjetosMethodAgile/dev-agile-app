@@ -1,8 +1,8 @@
 const { devAgile } = require("../../models/index.js");
 const KanbanAtendente_Services = require("../../services/devagile_services/kanbanAtendente_Services.js");
-
 const KanbanSessao_Services = require("../../services/devagile_services/kanbanSessao_Services.js");
 
+const ws = require("../../websocket.js");
 const kanbanSessao_Services = new KanbanSessao_Services();
 
 class KanbanAtendente_Controller {
@@ -103,16 +103,15 @@ class KanbanAtendente_Controller {
   }
 
   async vinculaAtendenteToCard_Controller(req, res) {
-    const { atendente_id } = req.body;
+    const { usuario_id } = req.body;
     const { sessao_id } = req.params;
 
     const sessao = await kanbanSessao_Services.pegaSessaoCardPorId_Services(
       sessao_id
     );
-    const atendente =
-      await this.kanbanAtendenteService.consultaAtendente_Services(
-        atendente_id
-      );
+
+    const { atendente } =
+      await this.kanbanAtendenteService.consultaAtendente_Services(usuario_id);
 
     if (!sessao || !atendente) {
       return res.status(404).json({
@@ -123,21 +122,25 @@ class KanbanAtendente_Controller {
 
     const validaDuplicidade =
       await kanbanSessao_Services.validaSessaoPorAtendenteId_Services(
-        atendente_id,
+        atendente.id,
         sessao_id
       );
     if (validaDuplicidade) {
       return res
-        .status(404)
-        .json({ error: true, message: "atendente ja vinculado ao card" });
+        .status(200)
+        .json({ error: true, message: "ja vinculado ao card" });
     }
     const vinculo =
       await this.kanbanAtendenteService.vinculaAtendenteToCard_Services(
-        atendente_id,
+        atendente.id,
         sessao_id
       );
 
     if (!vinculo.error) {
+      ws.broadcast({
+        type: `cardUpdated-${sessao.card_id}`,
+        message: "atendente vinculado ao card",
+      });
       return res
         .status(200)
         .json({ error: false, message: "atendente vinculado ao card" });
