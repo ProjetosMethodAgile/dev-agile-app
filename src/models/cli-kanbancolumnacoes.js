@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // Relacionamento com Usuario
       KanbanColumnAcoes.belongsTo(models.KanbanAcoes, {
-        foreignKey: "usuario_id",
+        foreignKey: "id_acao",
         as: "acoes_kanban",
       });
 
@@ -18,6 +18,10 @@ module.exports = (sequelize, DataTypes) => {
   }
   KanbanColumnAcoes.init(
     {
+      id:{
+        type:DataTypes.UUID,
+        primaryKey: true
+      },
       id_column: DataTypes.UUID,
       id_acao: DataTypes.UUID,
     },

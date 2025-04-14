@@ -22,6 +22,7 @@ class Usuario_Controller extends Controller {
   async registerUsuario_Controller(req, res) {
     const { email, permissoes, empresa_id } = req.body;
     const bodyReq = req.body;
+  
 
     try {
       const isTrue = await this.allowNull(req, res);

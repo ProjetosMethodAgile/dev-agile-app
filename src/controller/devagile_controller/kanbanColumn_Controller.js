@@ -3,18 +3,20 @@ const { devAgile } = require("../../models");
 const KanbanColumn_Services = require("../../services/devagile_services/kanbanColumn_Services");
 const KanbanSetores_Services = require("../../services/devagile_services/kanbanSetores_Services");
 const Controller = require("../Controller");
+const kanban_Acao_Services = require("../../services/devagile_services/kanban_Acao_Services");
 
 const kanbanColumn_services = new KanbanColumn_Services();
-const camposObrigatorios = ["nome", "posicao", "setor_id"];
+const camposObrigatorios = ["nome", "posicao", "setor_id","id_acao"];
 const kanbanSetoresService = new KanbanSetores_Services();
 
+const kanban_acao_services = new kanban_Acao_Services();
 class KanbanColumn_Controller extends Controller {
   constructor() {
     super(kanbanColumn_services, camposObrigatorios);
   }
 
   async cadastraColumn_Controller(req, res) {
-    const { nome, posicao, setor_id } = req.body;
+    const { nome, posicao, setor_id,id_acao} = req.body;
 
     const isTrue = await this.allowNull(req, res);
     if (!isTrue.status) {
@@ -28,6 +30,7 @@ class KanbanColumn_Controller extends Controller {
     const setor = await devAgile.KanbanSetores.findOne({
       where: { id: setor_id },
     });
+
 
     if (!setor) {
       return res.status(404).json({
@@ -48,11 +51,21 @@ class KanbanColumn_Controller extends Controller {
         error: true,
       });
     }
+    const idAcao = await kanban_acao_services.validaAcaoID(id_acao)
+    
+    if (!idAcao) {
+      return res.status(404).json({
+        message: "Id ação invalido",
+        error: true,
+      });
 
-    const column = await kanbanColumn_services.criaColumn_Services(
+    }
+    
+    const column = await kanbanColumn_services.cadastraColumn_Service(
       nome,
       posicao,
-      setor_id
+      setor_id,
+      id_acao
     );
 
     if (column.error) {
