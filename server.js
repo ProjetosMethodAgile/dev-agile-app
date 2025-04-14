@@ -15,7 +15,7 @@ const server = https.createServer(httpsOptions, app);
 
 // Inicializa o WebSocket com path '/api/socket'
 initWsServer(server);
-
+//
 server.listen(PORT, () => {
   console.log(`Servidor HTTPS rodando na porta ${PORT}`);
 });
