@@ -3,7 +3,7 @@ const Empresa_Services = require("../../services/devagile_services/Empresa_Servi
 const Controller = require("../Controller.js");
 
 const kanban_acao_services = new kanban_Acao_Services();
-const camposObrigatorios = ["nome", "permissao_id"]; // a ação precisa estar vinculada a uma tela (permissao)
+const camposObrigatorios = ["nome","empID","descricao"]; // a ação precisa estar vinculada a uma tela (permissao)
 const empresa_service = new Empresa_Services();
 
 class Kanban_Acao_Controller extends Controller {
@@ -13,10 +13,9 @@ class Kanban_Acao_Controller extends Controller {
 
   async criaAcaoKanban_controller(req, res) {
     const data = req.body;
-    if (!data.nome || !data.descricao) {
-      return res.status(400).json({ message: "Nome não digitado" });
+    if (!data.nome || !data.descricao||!data.empID) {
+      return res.status(400).json({ message: "Preencha todos os campos" });
     }
-
     try {
       const acao = await kanban_acao_services.criaAcaoKanban_Services(data);
       if (!acao.error) {
@@ -85,13 +84,16 @@ class Kanban_Acao_Controller extends Controller {
         return res.status(400).json({ message: "Erro ao buscar registros" });
       }
       const empresa = await empresa_service.pegaEmpresaPorId_Services(id);
-
+    
+      
       if (!empresa) {
         return res.status(400).json({ message: "Erro ao buscar registros" });
       }
       const lista = await kanban_acao_services.pegaTodosAcaoEmpresa_Services(
-        id
+        empresa.id
       );
+     
+      
       return res.status(200).json(lista);
     } catch (e) {
       console.error(e);

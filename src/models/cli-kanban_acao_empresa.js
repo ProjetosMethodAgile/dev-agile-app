@@ -16,6 +16,10 @@ module.exports = (sequelize, DataTypes) => {
 
   KanbanAcaoEmpresa.init(
     {
+      id:{
+        type:DataTypes.UUID,
+        primaryKey: true
+      },
       empresa_id: DataTypes.UUID,
       kanban_acao_id: DataTypes.UUID
     },
