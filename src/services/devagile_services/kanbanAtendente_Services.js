@@ -35,7 +35,7 @@ class KanbanAtendente_Services extends Services {
     }
   }
 
-  async vinculaAtendenteToCard_Services(atendente_id, sessao_id) {
+  async vinculaAtendenteToCard_Services(atendente_id, sessao_id, card_id) {
     let vinculo;
     try {
       vinculo = await devAgile.KanbanSessoesAtendentes.create({
@@ -45,6 +45,10 @@ class KanbanAtendente_Services extends Services {
         visualizacao_atendente: true,
       });
 
+      ws.broadcast({
+        type: `cardUpdated-${card_id}`,
+        message: "atendente vinculado ao card",
+      });
       return { vinculo, error: false };
     } catch (error) {
       console.log(error);
