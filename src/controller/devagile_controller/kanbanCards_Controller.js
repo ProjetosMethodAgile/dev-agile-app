@@ -189,6 +189,7 @@ class KanbanCards_Controller extends Controller {
           // Envia o email definindo tanto o header customizado quanto o Message-ID padrão
           const emailToSetorResponse = await sendEmailRaw({
             to: [setor.email_setor],
+            cc: [process.env.MAIN_EMAIL], //precisa ser enviado para chegar na lambda e salvar os dados desse email no banco(NAO REMOVER)
             subject: emailSubject,
             text: emailBodySetor,
             // customHeaders: {
@@ -198,7 +199,7 @@ class KanbanCards_Controller extends Controller {
           console.log("Email enviado. SES response:", emailToSetorResponse);
           const emailToUsrResponse = await sendEmailRaw({
             to: user_email,
-            // cc: [process.env.MAIN_EMAIL],
+            cc: [process.env.MAIN_EMAIL], //precisa ser enviado para chegar na lambda e salvar os dados desse email no banco(NAO REMOVER)
             subject: emailSubjectUser,
             text: emailBodyUser,
             // customHeaders: {
@@ -400,7 +401,8 @@ class KanbanCards_Controller extends Controller {
           ? originalSubject
           : `Re: ${originalSubject}`;
         const emailToUsrResponse = await sendEmailRaw({
-          to: originalMsg.from_email || to_email, // destinatário é o email do usuário que abriu o chamado
+          to: to_email || originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
+          cc: originalMsg.cc_email || cc_email,
           subject: emailSubjectUser,
           text: `Atendente respondeu: \n\n${htmlBody ? htmlBody : textBody}`,
           inReplyTo: originalMsg.message_id,
@@ -408,6 +410,8 @@ class KanbanCards_Controller extends Controller {
         });
 
         console.log("Email respondido. SES response:", emailToUsrResponse);
+        console.log("Email COPIA CC. SES response:", cc_email);
+
         //pegando id da message enviada por email para o usuario e concatenando com o dominio do AWS SES para a validação na lambda comparar e atribuir os valores
         const messageId = emailToUsrResponse.MessageId;
         const formattedMessageId = `<${messageId}@sa-east-1.amazonses.com>`;
@@ -423,6 +427,7 @@ class KanbanCards_Controller extends Controller {
               inReplyTo: originalMsg.message_id,
               references: references,
               to_email,
+              cc_email: originalMsg.cc_email || cc_email,
             }
           );
       } else {
@@ -439,10 +444,6 @@ class KanbanCards_Controller extends Controller {
       }
 
       ws.broadcast({ type: `messageUpdate-${newMessage.data.sessao_id}` });
-      ws.broadcast({
-        type: `cardUpdated-${card_id}`,
-        message: "atendente vinculado ao card",
-      });
 
       return res.status(200).json({
         error: false,
