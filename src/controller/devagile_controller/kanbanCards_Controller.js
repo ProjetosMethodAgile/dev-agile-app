@@ -396,13 +396,34 @@ class KanbanCards_Controller extends Controller {
           );
         }
 
+        // Obtém o valor de cc vindo de originalMsg ou da variável cc_email
+        let ccEmails = originalMsg.cc_email || cc_email;
+
+        // Verifica se há algum conteúdo na variável
+        if (ccEmails) {
+          const mainEmail = process.env.MAIN_EMAIL;
+
+          // Separa os emails usando a vírgula como delimitador, remove espaços em branco
+          // e filtra para remover o email principal (comparando em caixa baixa para garantir a igualdade)
+          ccEmails = ccEmails
+            .split(",")
+            .map((email) => email.trim())
+            .filter((email) => email.toLowerCase() !== mainEmail.toLowerCase())
+            .join(", ");
+
+          // Caso a filtragem resulte em uma string vazia, você pode ajustar a variável para undefined
+          if (!ccEmails) {
+            ccEmails = undefined;
+          }
+        }
+
         const originalSubject = originalMsg.subject.trim();
         const emailSubjectUser = originalSubject.toLowerCase().startsWith("re:")
           ? originalSubject
           : `Re: ${originalSubject}`;
         const emailToUsrResponse = await sendEmailRaw({
           to: to_email || originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
-          cc: originalMsg.cc_email || cc_email,
+          cc: ccEmails,
           subject: emailSubjectUser,
           text: `Atendente respondeu: \n\n${htmlBody ? htmlBody : textBody}`,
           inReplyTo: originalMsg.message_id,
