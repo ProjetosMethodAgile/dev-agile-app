@@ -180,6 +180,31 @@ class KanbanColumn_Controller extends Controller {
       });
     }
   }
+
+
+ 
+async  pega_posicaoKanban_controller(req,res) {
+
+  
+  const {setor_id} = req.body
+  console.log(setor_id);
+  
+  try {
+    const posicaoColumns = await kanbanColumn_services.pegaPosicaoColumn_Services(setor_id);
+      console.log(posicaoColumns);
+      return res.status(200).json({posicaoColumns})
+
+  } catch (error) {
+    console.error('Erro ao pegar posição do Kanban:', error);
+    return res.status(404).json({
+      message:
+        "Não foi possível atualizar, contate o administrador do sistema",
+      error: true,
+    });
+  }
+
+}
+  
 }
 
 module.exports = KanbanColumn_Controller;
