@@ -1,5 +1,9 @@
 const { devAgile } = require("../../models/index.js");
 const KanbanAtendente_Services = require("../../services/devagile_services/kanbanAtendente_Services.js");
+const KanbanSessao_Services = require("../../services/devagile_services/kanbanSessao_Services.js");
+
+const ws = require("../../websocket.js");
+const kanbanSessao_Services = new KanbanSessao_Services();
 
 class KanbanAtendente_Controller {
   constructor() {
@@ -96,6 +100,52 @@ class KanbanAtendente_Controller {
       );
 
     return res.status(200).json({ usuarios: atendentes, error: false });
+  }
+
+  async vinculaAtendenteToCard_Controller(req, res) {
+    const { usuario_id } = req.body;
+    const { sessao_id } = req.params;
+
+    const sessao = await kanbanSessao_Services.pegaSessaoCardPorId_Services(
+      sessao_id
+    );
+
+    const { atendente } =
+      await this.kanbanAtendenteService.consultaAtendente_Services(usuario_id);
+
+    if (!sessao || !atendente) {
+      return res.status(404).json({
+        error: true,
+        message: "nenhuma sessao ou atendente encontrado",
+      });
+    }
+
+    const validaDuplicidade =
+      await kanbanSessao_Services.validaSessaoPorAtendenteId_Services(
+        atendente.id,
+        sessao_id
+      );
+    if (validaDuplicidade) {
+      return res
+        .status(200)
+        .json({ error: true, message: "ja vinculado ao card" });
+    }
+    const vinculo =
+      await this.kanbanAtendenteService.vinculaAtendenteToCard_Services(
+        atendente.id,
+        sessao_id,
+        sessao.card_id
+      );
+
+    if (!vinculo.error) {
+      return res
+        .status(200)
+        .json({ error: false, message: "atendente vinculado ao card" });
+    } else {
+      return res
+        .status(404)
+        .json({ error: true, message: "erro ao vincular atendente" });
+    }
   }
 }
 

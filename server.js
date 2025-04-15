@@ -11,10 +11,8 @@ const httpsOptions = {
    cert: fs.readFileSync("/etc/letsencrypt/live/devagile.com.br/fullchain.pem"), 
 };
 
-
 const server = https.createServer(httpsOptions, app);
 
-// Inicializa o WebSocket com path '/api/socket'
 initWsServer(server);
 
 server.listen(PORT, () => {

@@ -257,6 +257,20 @@ class KanbanCards_Services {
             model: devAgile.KanbanSessoes,
             as: "CardSessao",
             attributes: ["id"],
+            include: [
+              {
+                model: devAgile.KanbanAtendenteHelpDesk,
+                as: "atendentesVinculados",
+                attributes: ["createdAt"],
+                include: [
+                  {
+                    model: devAgile.Usuario,
+                    as: "UsuarioAtendente",
+                    attributes: ["nome", "email", "contato"],
+                  },
+                ],
+              },
+            ],
           },
         ],
       });
@@ -335,15 +349,15 @@ class KanbanCards_Services {
             include: [
               {
                 model: devAgile.KanbanAtendenteHelpDesk,
-                as: "SessaoAtendenteID",
-                attributes: [],
-                through: {
-                  attributes: [
-                    "visualizacao_atendente",
-                    "atendente_id",
-                    "createdAt",
-                  ],
-                },
+                as: "atendentesVinculados",
+                attributes: ["createdAt"],
+                include: [
+                  {
+                    model: devAgile.Usuario,
+                    as: "UsuarioAtendente",
+                    attributes: ["nome", "email", "contato"],
+                  },
+                ],
               },
               {
                 model: devAgile.KanbanSessoesMessages,

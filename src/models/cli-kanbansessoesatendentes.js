@@ -15,6 +15,10 @@ module.exports = (sequelize, DataTypes) => {
   }
   KanbanSessoesAtendentes.init(
     {
+      id: {
+        primaryKey: true,
+        type: DataTypes.UUID,
+      },
       sessao_id: DataTypes.UUID,
       atendente_id: DataTypes.UUID,
       visualizacao_atendente: DataTypes.BOOLEAN,
