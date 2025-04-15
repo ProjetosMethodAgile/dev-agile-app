@@ -23,8 +23,6 @@ class KanbanColumn_Services extends Services {
         nome,
         posicao,
         setor_id,
-      });
-
       },
       { transaction }
     );
@@ -34,9 +32,10 @@ class KanbanColumn_Services extends Services {
         id: uuid.v4(),
         id_column: column.dataValues.id,
         id_acao: id_acao,
-      });
       },
       { transaction })
+
+
       await transaction.commit();
       return { error: false, message: "Cadastro realizado com sucesso" };
     } catch (err) {
