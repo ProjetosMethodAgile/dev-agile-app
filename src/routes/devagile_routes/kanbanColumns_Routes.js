@@ -6,6 +6,9 @@ const router = Router();
 const kanbanColunm_controller = new KanbanColumn_Controller();
 
 // Rota para criar uma nova coluna e vincular a um setor
+router.get("/api/helpdesk/column/posicao/:id", (req, res) =>
+  kanbanColunm_controller.pega_posicaoKanban_controller(req, res)
+);
 router.post("/api/helpdesk/column", (req, res) =>
   kanbanColunm_controller.cadastraColumn_Controller(req, res)
 );

@@ -23,18 +23,20 @@ class KanbanColumn_Services extends Services {
         nome,
         posicao,
         setor_id,
+      });
+
       },
       { transaction }
     );
     
 
-      const columnNow =  await devAgile.KanbanColumnAcoes.create({
+      const columnNow = await devAgile.KanbanColumnAcoes.create({
         id: uuid.v4(),
         id_column: column.dataValues.id,
         id_acao: id_acao,
+      });
       },
       { transaction })
-
       await transaction.commit();
       return { error: false, message: "Cadastro realizado com sucesso" };
     } catch (err) {
@@ -58,6 +60,18 @@ class KanbanColumn_Services extends Services {
     } catch (error) {
       throw new Error(`Erro ao buscar setor: ${error.message}`);
     }
+  }
+
+  async pegaPosicaoColumn_Services(setor_id) {
+    const posicao = await devAgile.KanbanComlumns.findAll({
+      attributes: ["posicao"],
+      where: { setor_id },
+    });
+
+    const posicoesKanban = posicao.map((item)=> item.posicao
+
+  )
+    return posicoesKanban;
   }
 
   async atualizaOrdemColumnsPorSetorID_Services(setor_id, setor_list) {
