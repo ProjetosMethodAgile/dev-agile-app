@@ -1,6 +1,7 @@
 const Services = require("../Services.js");
 const { devAgile } = require("../../models/index.js");
 const uuid = require("uuid");
+const ws = require("../../websocket.js");
 
 class KanbanAtendente_Services extends Services {
   constructor() {
