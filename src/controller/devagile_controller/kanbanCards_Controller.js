@@ -1,6 +1,7 @@
 const { devAgile } = require("../../models");
 const KanbanCards_Services = require("../../services/devagile_services/kanbanCards_Services");
 const KanbanSetores_Services = require("../../services/devagile_services/kanbanSetores_Services");
+const KanbanAtendente_Services = require("../../services/devagile_services/kanbanAtendente_Services");
 const Usuario_Services = require("../../services/devagile_services/Usuario_Services");
 const { sendEmailRaw } = require("../../utils/sendEmailRaw");
 const Controller = require("../Controller");
@@ -8,6 +9,7 @@ const ws = require("../../websocket.js");
 
 const kanbanCardsService = new KanbanCards_Services();
 const usuarioServices = new Usuario_Services();
+const kanbanAtendente_Services = new KanbanAtendente_Services();
 const kanbanSetoresService = new KanbanSetores_Services();
 const camposObrigatorios = [
   "setor_id",
@@ -186,7 +188,7 @@ class KanbanCards_Controller extends Controller {
         try {
           // Envia o email definindo tanto o header customizado quanto o Message-ID padrão
           const emailToSetorResponse = await sendEmailRaw({
-            to: [setor.email_setor, process.env.MAIN_EMAIL],
+            to: [setor.email_setor],
             subject: emailSubject,
             text: emailBodySetor,
             // customHeaders: {
@@ -196,7 +198,7 @@ class KanbanCards_Controller extends Controller {
           console.log("Email enviado. SES response:", emailToSetorResponse);
           const emailToUsrResponse = await sendEmailRaw({
             to: user_email,
-            cc: [process.env.MAIN_EMAIL],
+            // cc: [process.env.MAIN_EMAIL],
             subject: emailSubjectUser,
             text: emailBodyUser,
             // customHeaders: {
@@ -306,7 +308,6 @@ class KanbanCards_Controller extends Controller {
         references,
         identify_atendente,
       } = req.body;
-      console.log(inReplyTo);
       if (!inReplyTo || !textBody) {
         return res.status(400).json({
           error: true,
@@ -326,8 +327,8 @@ class KanbanCards_Controller extends Controller {
         });
       }
 
-      let cliente_id;
-      let atendente_id;
+      let cliente_id = null;
+      let atendente_id = null;
       //quando solicitado do front é passado um usuario id para identificar o atendente_id que respondeu
       if (identify_atendente) {
         const atendente = await devAgile.KanbanAtendenteHelpDesk.findOne({
@@ -338,11 +339,9 @@ class KanbanCards_Controller extends Controller {
         const cliente = await devAgile.Usuario.findOne({
           where: { email: from_email },
         });
-        console.log(cliente);
+        // console.log(cliente);
         if (cliente) {
           cliente_id = cliente.id;
-          console.log("cliente_id");
-          console.log(cliente_id);
         }
       }
 
@@ -383,15 +382,25 @@ class KanbanCards_Controller extends Controller {
       // Se for resposta do atendente (no sistema), envia para o usuário
       // Caso contrário, se for resposta do usuário, envia para o atendente/sector
       if (atendente_id) {
-        console.log("atendente aqui");
-        console.log(atendente_id);
+        const validaAtendenteSessao =
+          await devAgile.KanbanSessoesAtendentes.findOne({
+            where: { sessao_id: newMessage.data.sessao_id, atendente_id },
+          });
+
+        if (!validaAtendenteSessao) {
+          //vincula atendente caso ja não esteja
+          await kanbanAtendente_Services.vinculaAtendenteToCard_Services(
+            atendente_id,
+            newMessage.data.sessao_id
+          );
+        }
 
         const originalSubject = originalMsg.subject.trim();
         const emailSubjectUser = originalSubject.toLowerCase().startsWith("re:")
           ? originalSubject
           : `Re: ${originalSubject}`;
         const emailToUsrResponse = await sendEmailRaw({
-          to: originalMsg.to_email, // destinatário é o email do usuário que abriu o chamado
+          to: originalMsg.from_email || to_email, // destinatário é o email do usuário que abriu o chamado
           subject: emailSubjectUser,
           text: `Atendente respondeu: \n\n${htmlBody ? htmlBody : textBody}`,
           inReplyTo: originalMsg.message_id,
@@ -428,9 +437,12 @@ class KanbanCards_Controller extends Controller {
         //   },
         // });
       }
-      console.log(newMessage.data);
 
       ws.broadcast({ type: `messageUpdate-${newMessage.data.sessao_id}` });
+      ws.broadcast({
+        type: `cardUpdated-${card_id}`,
+        message: "atendente vinculado ao card",
+      });
 
       return res.status(200).json({
         error: false,

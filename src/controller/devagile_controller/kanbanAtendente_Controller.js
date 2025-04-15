@@ -133,14 +133,11 @@ class KanbanAtendente_Controller {
     const vinculo =
       await this.kanbanAtendenteService.vinculaAtendenteToCard_Services(
         atendente.id,
-        sessao_id
+        sessao_id,
+        sessao.card_id
       );
 
     if (!vinculo.error) {
-      ws.broadcast({
-        type: `cardUpdated-${sessao.card_id}`,
-        message: "atendente vinculado ao card",
-      });
       return res
         .status(200)
         .json({ error: false, message: "atendente vinculado ao card" });
