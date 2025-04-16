@@ -7,7 +7,11 @@ class KanbanMotivos_Controller {
 
   // Cria um novo motivo
   async criaMotivo_Controller(req, res) {
-    const dados = req.body; // Espera receber { setor_id, descricao, src_img }
+    const dados = req.body; 
+    if(!dados.setor_id|!dados.descricao |!dados.src_img){
+      return res.status(500).json({ error: true, message:"Preencha todas as informações" });
+    }
+    
     const result = await this.kanbanMotivosService.criaMotivo_Services(dados);
     if (result.error) {
       return res.status(500).json({ error: true, message: result.message });
@@ -71,6 +75,8 @@ class KanbanMotivos_Controller {
 
   // Deleta um motivo pelo ID
   async deletaMotivoPorId_Controller(req, res) {
+    console.log("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    
     const { id } = req.params;
     const result = await this.kanbanMotivosService.deletaMotivoPorId_Services(
       id

@@ -6,7 +6,7 @@ const Controller = require("../Controller");
 const kanban_Acao_Services = require("../../services/devagile_services/kanban_Acao_Services");
 
 const kanbanColumn_services = new KanbanColumn_Services();
-const camposObrigatorios = ["nome", "posicao", "setor_id","id_acao"];
+const camposObrigatorios = ["nome", "setor_id","id_acao"];
 const kanbanSetoresService = new KanbanSetores_Services();
 
 const kanban_acao_services = new kanban_Acao_Services();
@@ -16,7 +16,8 @@ class KanbanColumn_Controller extends Controller {
   }
 
   async cadastraColumn_Controller(req, res) {
-    const { nome, posicao, setor_id,id_acao} = req.body;
+    const { nome, setor_id,id_acao} = req.body;
+
 
     const isTrue = await this.allowNull(req, res);
     if (!isTrue.status) {
@@ -30,8 +31,17 @@ class KanbanColumn_Controller extends Controller {
     const setor = await devAgile.KanbanSetores.findOne({
       where: { id: setor_id },
     });
+    const columnsPosition = await kanbanColumn_services.pegaPosicaoColumn_Services(setor_id)
+    const posicoesNumericas = columnsPosition.map(col => Number(col));
+    const maiorPosicao = posicoesNumericas.length > 0 
+    ? Math.max(...posicoesNumericas) 
+    : 0;
+    const novaPosicao = String(maiorPosicao + 1);
 
+console.log(novaPosicao);
 
+ 
+    
     if (!setor) {
       return res.status(404).json({
         message: "Não foi possível cadastrar a coluna",
@@ -41,9 +51,12 @@ class KanbanColumn_Controller extends Controller {
 
     const validaPosicao =
       await kanbanColumn_services.validaPosicaoColumn_Services(
-        posicao,
+        novaPosicao,
         setor_id
       );
+
+   
+      
 
     if (validaPosicao.error) {
       return res.status(404).json({
@@ -63,7 +76,7 @@ class KanbanColumn_Controller extends Controller {
     
     const column = await kanbanColumn_services.cadastraColumn_Service(
       nome,
-      posicao,
+      novaPosicao,
       setor_id,
       id_acao
     );
