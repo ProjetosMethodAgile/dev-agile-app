@@ -22,7 +22,6 @@ class Usuario_Controller extends Controller {
   async registerUsuario_Controller(req, res) {
     const { email, permissoes, empresa_id } = req.body;
     const bodyReq = req.body;
-  
 
     try {
       const isTrue = await this.allowNull(req, res);
@@ -228,9 +227,10 @@ class Usuario_Controller extends Controller {
     try {
       const usuario = await usuario_services.pegaUsuariosPorEmpId_Services(id);
       if (!usuario.status) {
-        return res
-          .status(400)
-          .json({ message: "Usuários não encontrado nesta empresa", error: true });
+        return res.status(400).json({
+          message: "Usuários não encontrado nesta empresa",
+          error: true,
+        });
       }
       return res.status(200).json(usuario);
     } catch (error) {
@@ -241,30 +241,29 @@ class Usuario_Controller extends Controller {
     }
   }
 
-
   async atualizaUsuario_Controller(req, res) {
     const { id } = req.params;
-    const {
-      nome,
-      email,
-      cargo,
-      permissoesCRUD,
-      empresa_id,
-      colecao,
-      clientes,
-    } = req.body;
-
+    const { nome, email, cargo, permissoesCRUD, empresa_id } = req.body;
+  
     try {
+      if (!Array.isArray(permissoesCRUD)) {
+        return res.status(400).json({
+          message: "permissoesCRUD deve ser um array válido",
+          error: true,
+        });
+      }
+  
       // Validação das permissões CRUD
-      const invalidPermissoes = permissoesCRUD.some(
-        (permissao) =>
+      const invalidPermissoes = permissoesCRUD.some((permissao) => {
+        return (
           !permissao.permissao_id ||
-          typeof permissao.can_create === "undefined" ||
-          typeof permissao.can_read === "undefined" ||
-          typeof permissao.can_update === "undefined" ||
-          typeof permissao.can_delete === "undefined"
-      );
-
+          typeof permissao.acessos.can_create === "undefined" ||
+          typeof permissao.acessos.can_read === "undefined" ||
+          typeof permissao.acessos.can_update === "undefined" ||
+          typeof permissao.acessos.can_delete === "undefined"
+        );
+      });
+  
       if (invalidPermissoes) {
         return res.status(400).json({
           message:
@@ -272,18 +271,45 @@ class Usuario_Controller extends Controller {
           error: true,
         });
       }
-
-      // Atualiza usuário chamando o serviço
+  
+      // Lógica de telas e subtelas
+      let permissoesComSubtelas = [];
+      for (const perm of permissoesCRUD) {
+        const tela = await devAgile.Permissao.findByPk(perm.permissao_id, {
+          include: [{ model: devAgile.Permissao, as: "subpermissoes" }],
+        });
+  
+        if (!tela) {
+          return res.status(400).json({
+            message: `A permissão ${perm.permissao_id} não existe`,
+            error: true,
+          });
+        }
+  
+        // Adiciona a permissão principal
+        permissoesComSubtelas.push(perm);
+  
+        // Adiciona subtelas com os mesmos acessos
+        if (tela.subpermissoes.length > 0) {
+          tela.subpermissoes.forEach((subtela) => {
+            permissoesComSubtelas.push({
+              permissao_id: subtela.id,
+              acessos: perm.acessos,
+              acoes: [], // Adicione lógica para ações se necessário
+            });
+          });
+        }
+      }
+  
+      // Atualiza usuário chamando o serviço com as permissões completas
       const result = await usuario_services.atualizaUsuario_Services(id, {
         nome,
         email,
         cargo,
         empresa_id,
-        permissoesCRUD,
+        permissoesCRUD: permissoesComSubtelas,
       });
-
-      console.log(result);
-
+  
       if (result.status) {
         return res.status(200).json({
           message: "Usuário atualizado com sucesso!",
@@ -303,6 +329,8 @@ class Usuario_Controller extends Controller {
       });
     }
   }
+
+
 
   async deletaUsuarioPorId_Controller(req, res) {
     const { id } = req.params;
@@ -327,5 +355,3 @@ class Usuario_Controller extends Controller {
 }
 
 module.exports = Usuario_Controller;
-
-

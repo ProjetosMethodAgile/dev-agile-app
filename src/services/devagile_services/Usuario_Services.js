@@ -551,35 +551,62 @@ class Usuario_Services extends Services {
         },
         { where: { id: userId }, transaction }
       );
-
-      // 2. Atualizar permissões CRUD
-      if (data.permissoesCRUD) {
-        // Verifique se `usuarios_permissoes` está importado diretamente do `models/index.js`
-        await devAgile.usuarios_permissoes.destroy({
+  
+      // 2. Verifique se `permissoesCRUD` foi passado e se contém dados
+      if (data.permissoesCRUD && devAgile) {
+        let permissoesComSubtelas = [];
+  
+        // Expandir permissões com subtelas
+        for (const perm of data.permissoesCRUD) {
+          const tela = await devAgile.Permissao.findByPk(perm.permissao_id, {
+            include: [{ model: devAgile.Permissao, as: "subpermissoes" }],
+          });
+  
+          if (!tela) {
+            throw new Error(`A permissão ${perm.permissao_id} não existe`);
+          }
+  
+          // Adiciona a permissão principal
+          permissoesComSubtelas.push(perm);
+  
+          // Adiciona as subtelas, caso existam
+          if (tela.subpermissoes.length > 0) {
+            tela.subpermissoes.forEach((subtela) => {
+              permissoesComSubtelas.push({
+                permissao_id: subtela.id,
+                acessos: perm.acessos,  // Mantém os mesmos acessos da permissão principal
+              });
+            });
+          }
+        }
+  
+        // 3. Deleta permissões anteriores
+        await devAgile.UserPermissionAccess.destroy({
           where: { usuario_id: userId },
           transaction,
         });
-
-        await devAgile.usuarios_permissoes.bulkCreate(
-          data.permissoesCRUD.map((perm) => ({
+  
+        // 4. Cria as permissões com subtelas no banco
+        await devAgile.UserPermissionAccess.bulkCreate(
+          permissoesComSubtelas.map((perm) => ({
             usuario_id: userId,
             permissao_id: perm.permissao_id,
-            can_create: perm.can_create,
-            can_read: perm.can_read,
-            can_update: perm.can_update,
-            can_delete: perm.can_delete,
+            can_create: perm.acessos.can_create,
+            can_read: perm.acessos.can_read,
+            can_update: perm.acessos.can_update,
+            can_delete: perm.acessos.can_delete,
           })),
           { transaction }
         );
       }
-
+  
       // Commit da transação
       await transaction.commit();
       return { status: true };
     } catch (error) {
       await transaction.rollback();
       console.error("Erro ao atualizar usuário:", error);
-      return { status: false, message: "Erro ao atualizar usuário" };
+      return { status: false, message: error.message || "Erro ao atualizar usuário" };
     }
   }
 
