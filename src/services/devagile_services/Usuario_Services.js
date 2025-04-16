@@ -440,7 +440,7 @@ class Usuario_Services extends Services {
             as: "empresas",
             attributes: ["id", "nome", "cnpj"],
             through: { attributes: [] },
-            where:{id}
+            where: { id },
           },
           {
             model: devAgile.Role,
@@ -534,59 +534,73 @@ class Usuario_Services extends Services {
       console.log(error);
       throw new Error("Erro ao buscar usuários");
     }
-
-
   }
 
   async atualizaUsuario_Services(userId, data) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
       // 1. Atualizar dados básicos do usuário
-      await devAgile.Usuario.update(
-        {
-          nome: data.nome,
-          email: data.email,
-          cargo: data.cargo,
-          empresa_id: data.empresa_id,
-        },
-        { where: { id: userId }, transaction }
-      );
-  
+      if (!data.senha) {
+        await devAgile.Usuario.update(
+          {
+            nome: data.nome,
+            email: data.email,
+            empresa_id: data.empresa_id,
+          },
+          { where: { id: userId }, transaction }
+        );
+      } else {
+        await devAgile.Usuario.update(
+          {
+            nome: data.nome,
+            email: data.email,
+            senha: data.senha,
+            empresa_id: data.empresa_id,
+          },
+          { where: { id: userId }, transaction }
+        );
+      }
+
       // 2. Verifique se `permissoesCRUD` foi passado e se contém dados
       if (data.permissoesCRUD && devAgile) {
         let permissoesComSubtelas = [];
-  
         // Expandir permissões com subtelas
         for (const perm of data.permissoesCRUD) {
           const tela = await devAgile.Permissao.findByPk(perm.permissao_id, {
             include: [{ model: devAgile.Permissao, as: "subpermissoes" }],
           });
-  
+
+          console.log(tela);
+
           if (!tela) {
             throw new Error(`A permissão ${perm.permissao_id} não existe`);
           }
-  
+
           // Adiciona a permissão principal
           permissoesComSubtelas.push(perm);
-  
-          // Adiciona as subtelas, caso existam
-          if (tela.subpermissoes.length > 0) {
-            tela.subpermissoes.forEach((subtela) => {
-              permissoesComSubtelas.push({
-                permissao_id: subtela.id,
-                acessos: perm.acessos,  // Mantém os mesmos acessos da permissão principal
-              });
-            });
-          }
         }
-  
-        // 3. Deleta permissões anteriores
+
+        // Deleta permissões anteriores
+        await devAgile.UsuarioPermissao.destroy({
+          where: { usuario_id: userId },
+          transaction,
+        });
+        //  Cria as permissões com subtelas no banco
+        await devAgile.UsuarioPermissao.bulkCreate(
+          permissoesComSubtelas.map((perm) => ({
+            usuario_id: userId,
+            permissao_id: perm.permissao_id,
+          })),
+          { transaction }
+        );
+
+        // Deleta permissões Acces anteriores
         await devAgile.UserPermissionAccess.destroy({
           where: { usuario_id: userId },
           transaction,
         });
-  
-        // 4. Cria as permissões com subtelas no banco
+
+        //  Cria as permissões Acess com subtelas no banco
         await devAgile.UserPermissionAccess.bulkCreate(
           permissoesComSubtelas.map((perm) => ({
             usuario_id: userId,
@@ -599,14 +613,27 @@ class Usuario_Services extends Services {
           { transaction }
         );
       }
-  
+
+      // atualizando role_id
+      const att = await devAgile.usuarios_roles.update(
+        {
+          usuario_id: userId,
+          role_id: data.roles_id,
+        },
+        { where: { usuario_id: userId }, transaction }
+      );
+      console.log(data.role_id);
+
       // Commit da transação
       await transaction.commit();
       return { status: true };
     } catch (error) {
       await transaction.rollback();
       console.error("Erro ao atualizar usuário:", error);
-      return { status: false, message: error.message || "Erro ao atualizar usuário" };
+      return {
+        status: false,
+        message: error.message || "Erro ao atualizar usuário",
+      };
     }
   }
 
