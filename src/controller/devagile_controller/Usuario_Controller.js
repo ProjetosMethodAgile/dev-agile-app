@@ -243,8 +243,9 @@ class Usuario_Controller extends Controller {
 
   async atualizaUsuario_Controller(req, res) {
     const { id } = req.params;
-    const { nome, email, cargo, permissoesCRUD, empresa_id } = req.body;
-  
+    let { nome, email, roles_id, permissoesCRUD, senha } = req.body;
+    console.log(req.body);
+
     try {
       if (!Array.isArray(permissoesCRUD)) {
         return res.status(400).json({
@@ -252,7 +253,7 @@ class Usuario_Controller extends Controller {
           error: true,
         });
       }
-  
+
       // Validação das permissões CRUD
       const invalidPermissoes = permissoesCRUD.some((permissao) => {
         return (
@@ -263,7 +264,7 @@ class Usuario_Controller extends Controller {
           typeof permissao.acessos.can_delete === "undefined"
         );
       });
-  
+
       if (invalidPermissoes) {
         return res.status(400).json({
           message:
@@ -271,45 +272,22 @@ class Usuario_Controller extends Controller {
           error: true,
         });
       }
-  
-      // Lógica de telas e subtelas
-      let permissoesComSubtelas = [];
-      for (const perm of permissoesCRUD) {
-        const tela = await devAgile.Permissao.findByPk(perm.permissao_id, {
-          include: [{ model: devAgile.Permissao, as: "subpermissoes" }],
-        });
-  
-        if (!tela) {
-          return res.status(400).json({
-            message: `A permissão ${perm.permissao_id} não existe`,
-            error: true,
-          });
-        }
-  
-        // Adiciona a permissão principal
-        permissoesComSubtelas.push(perm);
-  
-        // Adiciona subtelas com os mesmos acessos
-        if (tela.subpermissoes.length > 0) {
-          tela.subpermissoes.forEach((subtela) => {
-            permissoesComSubtelas.push({
-              permissao_id: subtela.id,
-              acessos: perm.acessos,
-              acoes: [], // Adicione lógica para ações se necessário
-            });
-          });
-        }
+
+      if (senha) {
+        const salt = await bcrypt.genSalt(12);
+        let senhaHash = await bcrypt.hash(senha, salt);
+        senha = senhaHash;
       }
-  
+
       // Atualiza usuário chamando o serviço com as permissões completas
       const result = await usuario_services.atualizaUsuario_Services(id, {
         nome,
         email,
-        cargo,
-        empresa_id,
-        permissoesCRUD: permissoesComSubtelas,
+        senha,
+        roles_id,
+        permissoesCRUD,
       });
-  
+
       if (result.status) {
         return res.status(200).json({
           message: "Usuário atualizado com sucesso!",
@@ -329,8 +307,6 @@ class Usuario_Controller extends Controller {
       });
     }
   }
-
-
 
   async deletaUsuarioPorId_Controller(req, res) {
     const { id } = req.params;
