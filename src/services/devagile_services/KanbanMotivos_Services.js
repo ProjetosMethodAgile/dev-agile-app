@@ -60,20 +60,25 @@ class KanbanMotivos_Services extends Services {
     }
   }
 
-  // Atualiza um motivo pelo ID
-  async atualizaMotivoPorId_Services(id, dados) {
-    try {
-      const motivo = await devAgile[this.nomeModel].findByPk(id);
-      if (!motivo) return { error: true, message: "Motivo não encontrado" };
-      await motivo.update(dados);
-      return { error: false, motivo };
-    } catch (err) {
-      console.error("Erro ao atualizar motivo:", err);
-      return { error: true, message: "Erro ao atualizar motivo" };
-    }
-  }
+async atualizaMotivoPorId_Services(id, dados) {
+  try {
 
-  // Deleta um motivo pelo ID
+    const motivo = await devAgile[this.nomeModel].findByPk(id);
+    if (!motivo) {
+      return { error: true, message: "Motivo não encontrado" };
+    }
+    console.log(dados);
+    
+    await motivo.update({ descricao: dados.descricao, src_img:dados.src_img });
+    return { error: false, motivo };
+
+  } catch (err) {
+    console.error("Erro ao atualizar motivo:", err);
+    return { error: true, message: "Erro ao atualizar motivo" };
+  }
+}
+
+
   async deletaMotivoPorId_Services(id) {
     try {
       const motivo = await devAgile[this.nomeModel].findByPk(id);
