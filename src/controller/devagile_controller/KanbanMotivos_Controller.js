@@ -61,12 +61,15 @@ class KanbanMotivos_Controller {
 
   // Atualiza um motivo pelo ID
   async atualizaMotivoPorId_Controller(req, res) {
+
     const { id } = req.params;
-    const dados = req.body;
+    const {descricao, src_img} = req.body;
+
     const result = await this.kanbanMotivosService.atualizaMotivoPorId_Services(
       id,
-      dados
+      {descricao, src_img}
     );
+    
     if (result.error) {
       return res.status(404).json({ error: true, message: result.message });
     }
@@ -75,7 +78,7 @@ class KanbanMotivos_Controller {
 
   // Deleta um motivo pelo ID
   async deletaMotivoPorId_Controller(req, res) {
-    console.log("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
     
     const { id } = req.params;
     const result = await this.kanbanMotivosService.deletaMotivoPorId_Services(
