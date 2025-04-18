@@ -243,8 +243,7 @@ class Usuario_Controller extends Controller {
 
   async atualizaUsuario_Controller(req, res) {
     const { id } = req.params;
-    let { nome, email, roles_id, permissoesCRUD, senha } = req.body;
-    console.log(req.body);
+    let { nome, email,status, roles_id,contato, permissoesCRUD, senha } = req.body;
 
     try {
       if (!Array.isArray(permissoesCRUD)) {
@@ -283,6 +282,8 @@ class Usuario_Controller extends Controller {
       const result = await usuario_services.atualizaUsuario_Services(id, {
         nome,
         email,
+        contato,
+        status,
         senha,
         roles_id,
         permissoesCRUD,

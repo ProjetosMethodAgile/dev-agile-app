@@ -546,6 +546,8 @@ class Usuario_Services extends Services {
           {
             nome: data.nome,
             email: data.email,
+            contato: data.contato,
+            status: data.status,
             empresa_id: data.empresa_id,
           },
           { where: { id: userId }, transaction }
@@ -556,6 +558,8 @@ class Usuario_Services extends Services {
             nome: data.nome,
             email: data.email,
             senha: data.senha,
+            contato: data.contato,
+            status: data.status,
             empresa_id: data.empresa_id,
           },
           { where: { id: userId }, transaction }
@@ -571,7 +575,6 @@ class Usuario_Services extends Services {
             include: [{ model: devAgile.Permissao, as: "subpermissoes" }],
           });
 
-          console.log(tela);
 
           if (!tela) {
             throw new Error(`A permissão ${perm.permissao_id} não existe`);
