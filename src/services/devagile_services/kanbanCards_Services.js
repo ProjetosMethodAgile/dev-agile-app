@@ -125,6 +125,7 @@ class KanbanCards_Services {
     bcc_email,
     subject,
     references,
+    system_msg,
   }) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
@@ -149,6 +150,7 @@ class KanbanCards_Services {
           bcc_email,
           subject,
           references_email: references,
+          system_msg,
         },
         { transaction }
       );
@@ -371,6 +373,7 @@ class KanbanCards_Services {
                   "cc_email",
                   "subject",
                   "atendente_id",
+                  "system_msg",
                   "cliente_id",
                   "content_msg",
                   "createdAt",

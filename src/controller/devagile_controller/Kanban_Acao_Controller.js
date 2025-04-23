@@ -111,6 +111,12 @@ class Kanban_Acao_Controller extends Controller {
         where: { sessao_id: sessao.id },
         order: [["createdAt", "DESC"]],
       });
+      if (!ultimaMessage) {
+        return res.status(404).json({
+          error: true,
+          message: "Mensagem original não encontrada",
+        });
+      }
 
       const originalSubject = ultimaMessage.subject.trim();
       const emailSubjectUser = originalSubject.toLowerCase().startsWith("re:")
@@ -119,11 +125,11 @@ class Kanban_Acao_Controller extends Controller {
 
       // Obtém o valor de cc vindo de originalMsg ou da variável cc_email
       let ccEmails = ultimaMessage.cc_email;
+      let toEmails = ultimaMessage.to_email;
 
       // Verifica se há algum conteúdo na variável
+      const mainEmail = process.env.MAIN_EMAIL;
       if (ccEmails) {
-        const mainEmail = process.env.MAIN_EMAIL;
-
         // Separa os emails usando a vírgula como delimitador, remove espaços em branco
         // e filtra para remover o email principal (comparando em caixa baixa para garantir a igualdade)
         ccEmails = ccEmails
@@ -137,49 +143,70 @@ class Kanban_Acao_Controller extends Controller {
           ccEmails = undefined;
         }
       }
+      if (toEmails) {
+        // Separa os emails usando a vírgula como delimitador, remove espaços em branco
+        // e filtra para remover o email principal (comparando em caixa baixa para garantir a igualdade)
+        toEmails = toEmails
+          .split(",")
+          .map((email) => email.trim())
+          .filter((email) => email.toLowerCase() !== mainEmail.toLowerCase())
+          .join(", ");
 
-      const TextBody = `Notificação do Sistema: \n\n Seu card mudou de situação para ${column_nome}`;
-
-      const emailToUsrResponse = await sendEmailRaw({
-        to: ultimaMessage.to_email, // destinatário é o email do usuário que abriu o chamado
-        cc: ccEmails,
-        subject: emailSubjectUser,
-        text: TextBody,
-        inReplyTo: ultimaMessage.message_id,
-        references: ultimaMessage.references_email,
-      });
-
-      //pegando id da message enviada por email para o usuario e concatenando com o dominio do AWS SES para a validação na lambda comparar e atribuir os valores
-      const messageId = emailToUsrResponse.MessageId;
-      const formattedMessageId = `<${messageId}@sa-east-1.amazonses.com>`;
-
-      let atendente_id = "";
-      let cliente_id = "";
-      let from_email = "";
-      // 2. Cria a nova mensagem, vinculando-a à mensagem original
-      const newMessage = await kanbanCardsService.replyMessage_Services({
-        originalMsg: ultimaMessage, // dados da menssagem respondida
-        textBody: TextBody, //corpo do email
-        // atendente_id,
-        // cliente_id,
-        message_id: formattedMessageId, // repassa o message id do email que foi enviado, se existir
-        inReplyTo: ultimaMessage.message_id,
-        // from_email,
-        // htmlBody,
-        to_email: ultimaMessage.to_email,
-        cc_email: ultimaMessage.cc_email,
-        // bcc_email,
-        subject: emailSubjectUser,
-        references: ultimaMessage.references_email,
-      });
-
-      if (!ultimaMessage) {
-        return res.status(404).json({
-          error: true,
-          message: "Mensagem original não encontrada",
-        });
+        // Caso a filtragem resulte em uma string vazia, ajusta a variável para o email do cliente que abriu o card
+        if (!toEmails) {
+          const primeiraMessage = await devAgile.KanbanSessoesMessages.findOne({
+            where: { sessao_id: sessao.id },
+            order: [["createdAt", "ASC"]],
+          });
+          if (primeiraMessage) {
+            toEmails = primeiraMessage.to_email;
+          } else {
+            toEmails = undefined;
+          }
+        }
       }
 
+      const TextBody = `Notificação do Sistema: \n\n Seu card mudou de situação para ${column_nome}`;
+      if (toEmails) {
+        const emailToUsrResponse = await sendEmailRaw({
+          to: toEmails, // destinatário é o email do usuário que abriu o chamado
+          cc: ccEmails,
+          subject: emailSubjectUser,
+          text: TextBody,
+          inReplyTo: ultimaMessage.message_id,
+          references: ultimaMessage.references_email,
+        });
+
+        //pegando id da message enviada por email para o usuario e concatenando com o dominio do AWS SES para a validação na lambda comparar e atribuir os valores
+        const messageId = emailToUsrResponse.MessageId;
+        const formattedMessageId = `<${messageId}@sa-east-1.amazonses.com>`;
+
+        // let atendente_id = "";
+        // let cliente_id = "";
+        // let from_email = "";
+        // 2. Cria a nova mensagem, vinculando-a à mensagem original
+        const newMessage = await kanbanCardsService.replyMessage_Services({
+          originalMsg: ultimaMessage, // dados da menssagem respondida
+          textBody: TextBody, //corpo do email
+          // atendente_id,
+          // cliente_id,
+          message_id: formattedMessageId, // repassa o message id do email que foi enviado, se existir
+          inReplyTo: ultimaMessage.message_id,
+          // from_email,
+          // htmlBody,
+          to_email: ultimaMessage.to_email,
+          cc_email: ultimaMessage.cc_email,
+          // bcc_email,
+          subject: emailSubjectUser,
+          references: ultimaMessage.references_email,
+          system_msg: true,
+        });
+      } else {
+        return res.status(404).json({
+          error: true,
+          message: "Não foi possivel enviar email / menssagem",
+        });
+      }
       return res.status(200).json(ultimaMessage);
     }
   }
