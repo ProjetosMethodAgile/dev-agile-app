@@ -34,8 +34,17 @@ module.exports = (sequelize, DataTypes) => {
   }
   KanbanAtendenteHelpDesk.init(
     {
+      id:{
+        type:
+        DataTypes.UUID,
+        primaryKey:true
+      },
       usuario_id: DataTypes.UUID,
       empresa_id: DataTypes.UUID,
+      status: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
     },
     {
       sequelize,
