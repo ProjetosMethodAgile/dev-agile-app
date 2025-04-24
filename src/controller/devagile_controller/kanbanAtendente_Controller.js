@@ -68,7 +68,21 @@ class KanbanAtendente_Controller {
     }
     return res.status(200).json({ message: result.message });
   }
+  async ativaAtendente_controller(req, res) {
+    const { id } = req.params;
+    const result = await this.kanbanAtendenteService.ativaAtendente_Services(
+      id
+    );
 
+  
+    
+    if (result.error) {
+      return res.status(404).json({ error: true, message: result.message });
+    }
+    return res.status(200).json({ message: result.message });
+  }
+
+  
   async consultaTodosAtendentesByEmpresaID_Controller(req, res) {
     const { id } = req.params;
 

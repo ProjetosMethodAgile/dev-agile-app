@@ -43,5 +43,8 @@ router.get(
 router.delete("/api/helpdesk/atendentes/:id", checkTokenLogin, (req, res) =>
   kanbanAtendenteController.deletaAtendente_Controller(req, res)
 );
+router.put("/api/helpdesk/atendentes/ativo/:id", checkTokenLogin, (req, res) =>
+  kanbanAtendenteController.ativaAtendente_controller(req, res)
+);
 
 module.exports = router;
