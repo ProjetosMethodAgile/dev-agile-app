@@ -167,7 +167,7 @@ class Kanban_Acao_Controller extends Controller {
         }
       }
 
-      const TextBody = `Notificação do Sistema: \n\n Seu card mudou de situação para ${column_nome}`;
+      const TextBody = `Notificação do Sistema: \n\n Seu chamado mudou de situação para ${column_nome}`;
       if (toEmails) {
         const emailToUsrResponse = await sendEmailRaw({
           to: toEmails, // destinatário é o email do usuário que abriu o chamado
