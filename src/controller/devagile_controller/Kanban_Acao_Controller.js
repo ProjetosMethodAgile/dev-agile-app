@@ -4,6 +4,7 @@ const Controller = require("../Controller.js");
 const { devAgile } = require("../../models");
 const KanbanCards_Services = require("../../services/devagile_services/kanbanCards_Services.js");
 const { sendEmailRaw } = require("../../utils/sendEmailRaw.js");
+const ws = require("../../websocket.js");
 
 const kanban_acao_services = new kanban_Acao_Services();
 const camposObrigatorios = ["nome", "empID", "descricao"]; // a ação precisa estar vinculada a uma tela (permissao)
@@ -200,6 +201,10 @@ class Kanban_Acao_Controller extends Controller {
           subject: emailSubjectUser,
           references: ultimaMessage.references_email,
           system_msg: true,
+        });
+        ws.broadcast({
+          type: `cardUpdated-${card_id}`,
+          message: "atendente vinculado ao card",
         });
       } else {
         return res.status(404).json({
