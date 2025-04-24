@@ -60,6 +60,9 @@ class KanbanAtendente_Controller {
     const result = await this.kanbanAtendenteService.deletaAtendente_Services(
       id
     );
+
+  
+    
     if (result.error) {
       return res.status(404).json({ error: true, message: result.message });
     }

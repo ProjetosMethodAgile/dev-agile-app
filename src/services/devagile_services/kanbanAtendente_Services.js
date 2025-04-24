@@ -107,20 +107,24 @@ class KanbanAtendente_Services extends Services {
       return { error: true, message: "Erro ao consultar atendente" };
     }
   }
-
-  // Deleta um atendente pelo ID
   async deletaAtendente_Services(id) {
     try {
-      const atendente = await devAgile[this.nomeModel].findByPk(id);
-      if (!atendente)
+      const AtendenteModel = devAgile[this.nomeModel];
+  
+      const atendente = await AtendenteModel.findOne({ where: { id } });
+      if (!atendente) {
         return { error: true, message: "Atendente não encontrado" };
-      await atendente.destroy();
+      }
+  
+      await atendente.update({ status: false });
+  
       return { error: false, message: "Atendente deletado com sucesso" };
     } catch (err) {
       console.error("Erro ao deletar atendente:", err);
       return { error: true, message: "Erro ao deletar atendente" };
     }
   }
+  
 
   async consultaUsuariosNaoAtendentesByEmpresaID_Services(id) {
     try {

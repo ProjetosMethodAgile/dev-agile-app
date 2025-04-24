@@ -19,10 +19,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       atendente_id: DataTypes.UUID,
       setor_id: DataTypes.UUID,
-      status: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-      },
+     
     },
     {
       sequelize,
