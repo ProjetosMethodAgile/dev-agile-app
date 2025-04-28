@@ -508,7 +508,7 @@ class KanbanCards_Controller extends Controller {
 
   async atualizaColumnCard_Controller(req, res) {
     try {
-      const { card_id, new_column_id } = req.body;
+      const { card_id, new_column_id, setor_id } = req.body;
       if (!card_id || !new_column_id) {
         return res.status(400).json({
           error: true,
@@ -527,6 +527,7 @@ class KanbanCards_Controller extends Controller {
         card_id,
         new_column_id
       );
+      ws.broadcast({ type: `cardUpdated-${setor_id}`, result });
       if (result.error) {
         return res.status(400).json({ error: true, message: result.message });
       }

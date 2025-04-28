@@ -72,6 +72,26 @@ class Kanban_Acao_Controller extends Controller {
     }
   }
 
+  async pegaAcoesPorColumnID_Controller(req, res) {
+    try {
+      const { id } = req.params;
+      if (!id) {
+        throw new Error("nenhuma coluna informada");
+      }
+      const acoes = await kanban_acao_services.pegaAcaoPorColumnId_Services(id);
+
+      if (!acoes) {
+        throw new Error("nenhum registro encontrado");
+      }
+
+      return res.status(200).json(acoes);
+    } catch (e) {
+      console.error(e);
+      return res
+        .status(500)
+        .json({ message: e.message ? e.message : "Erro ao buscar registros" });
+    }
+  }
   async pegaTodosKanban_Acao_Controller(req, res) {
     try {
       const lista = await kanban_acao_services.pegaTodoskanban_Acao_Services();
