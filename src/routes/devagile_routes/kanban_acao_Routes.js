@@ -17,6 +17,10 @@ route.get(
   (req, res) => kanban_acao_controller.pegaTodosKanban_Acao_Controller(req, res)
 );
 
+route.get("/api/helpdesk/acoes/column/:id", checkTokenLogin, (req, res) =>
+  kanban_acao_controller.pegaAcoesPorColumnID_Controller(req, res)
+);
+
 route.get("/api/helpdesk/acoes/empresa/:id", checkTokenLogin, (req, res) =>
   kanban_acao_controller.pegaTodosAcaoPorEmpresa_Controller(req, res)
 );
