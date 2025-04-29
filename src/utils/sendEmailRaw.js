@@ -25,6 +25,7 @@ async function sendEmailRaw({
   inReplyTo,
   references,
 }) {
+
   const toAddresses = Array.isArray(to) ? to.join(", ") : to;
   const ccAddresses = cc ? (Array.isArray(cc) ? cc.join(", ") : cc) : null;
 
