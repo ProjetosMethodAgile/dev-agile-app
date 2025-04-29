@@ -101,11 +101,11 @@ class Usuario_Controller extends Controller {
       }
 
       //Pega a empresa pelo id e recupera a tagName
-      const {tag} = await empresa_services.pegaEmpresaPorId_Services(
+      const { tag } = await empresa_services.pegaEmpresaPorId_Services(
         empresa_id
       );
 
-      // Função para gerar uma senha aleatória de 8 caracteres
+      // Função para gerar uma senha aleatória de 8 caracteres alfabeticos
       const createRandomPassword = () => {
         const caracteres =
           "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -120,8 +120,8 @@ class Usuario_Controller extends Controller {
       // Gera a senha aleatória
       const senhaGerada = createRandomPassword();
 
-      //Pega o template do email
-      const templatePath  = path.join(
+      //Pega template de email e substitui as variaveis
+      const templatePath = path.join(
         __dirname,
         "..",
         "..",
@@ -130,11 +130,11 @@ class Usuario_Controller extends Controller {
         "email",
         "new-user-password.html"
       );
-      const htmlTemplate  = fs.readFileSync(templatePath, "utf8");
+      const htmlTemplate = fs.readFileSync(templatePath, "utf8");
       const htmlContent = htmlTemplate
         .replace("{{NOME_USUARIO}}", bodyReq.nome)
         .replace("{{SENHA_TEMPORARIA}}", senhaGerada)
-        .replace("{{TAG_EMPRESA}}", tag)
+        .replace("{{TAG_EMPRESA}}", tag);
 
       // envia o email com a senha criptografadas
       sendEmailRaw({
@@ -228,9 +228,11 @@ class Usuario_Controller extends Controller {
         message: "E-mail ou Senha incorreta",
       });
     }
+
     return res.status(200).json({
       message: "Autenticação realizada com sucesso",
       token: checkSenha.token,
+      primeiroAcesso: usuario.primeiro_acesso,
       error: false,
     });
   }

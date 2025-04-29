@@ -227,6 +227,17 @@ class Usuario_Services extends Services {
   async pegaUsuarioPorEmail_Services(email) {
     const retorno = await devAgile.Usuario.findOne({
       where: { email },
+      attributes: [
+        "id",
+        "nome",
+        "email",
+        "contato",
+        "status",
+        "primeiro_acesso",
+        "status",
+        "createdAt",
+        "updatedAt",
+      ],
       include: [
         {
           model: devAgile.Empresa,
