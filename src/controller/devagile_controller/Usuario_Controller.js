@@ -135,7 +135,6 @@ class Usuario_Controller extends Controller {
         .replace("{{NOME_USUARIO}}", bodyReq.nome)
         .replace("{{SENHA_TEMPORARIA}}", senhaGerada)
         .replace("{{TAG_EMPRESA}}", tag)
-        console.log(htmlContent);
 
       // envia o email com a senha criptografadas
       sendEmailRaw({
