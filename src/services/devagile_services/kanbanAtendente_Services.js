@@ -82,7 +82,47 @@ class KanbanAtendente_Services extends Services {
       return { error: true, message: "Erro ao consultar atendente" };
     }
   }
+  async consultaTodosAtendente_Services(empresaId) {
+    try {
 
+      const atendentes = await devAgile[this.nomeModel].findAll({
+        where: {
+          empresa_id: empresaId,       // filtra somente os atendentes dessa empresa
+        },
+        attributes: {
+          include: ["status"],
+        },
+        include: [
+          {
+            model: devAgile["KanbanSetores"],
+            as: "Setores",
+            through: {
+            model: devAgile.KanbanAtendenteSetores,
+            attributes:{
+              include: ["status"],      // <– aqui
+              
+            } 
+          },
+          },
+          {
+            model: devAgile.Usuario,
+            as: "UsuarioAtendente",
+          },
+         
+        ],
+      });
+
+  
+      if (!atendentes || atendentes.length === 0) {
+        return { error: true, message: "Nenhum Atendente encontrado para essa empresa" };
+      }
+  
+      return { error: false, atendentes };
+    } catch (err) {
+      console.error("Erro ao consultar atendente:", err);
+      return { error: true, message: "Erro ao consultar atendente" };
+    }
+  }
   async consultaTodosAtendentes_Services(id) {
     try {
       const atendentes = await devAgile[this.nomeModel].findAll({
@@ -124,6 +164,23 @@ class KanbanAtendente_Services extends Services {
       return { error: true, message: "Erro ao deletar atendente" };
     }
   }
+  async ativaAtendente_Services(id) {
+    try {
+      const AtendenteModel = devAgile[this.nomeModel];
+  
+      const atendente = await AtendenteModel.findOne({ where: { id } });
+      if (!atendente) {
+        return { error: true, message: "Atendente não encontrado" };
+      }
+  
+      await atendente.update({ status: true });
+  
+      return { error: false, message: "Atendente Ativo com sucesso" };
+    } catch (err) {
+      console.error("Erro ao ativar o atendente:", err);
+      return { error: true, message: "Erro ao Ativar o atendente" };
+    }
+  }
   
 
   async consultaUsuariosNaoAtendentesByEmpresaID_Services(id) {
@@ -141,6 +198,7 @@ class KanbanAtendente_Services extends Services {
             model: devAgile.Usuario,
             as: "UsuarioAtendente",
           },
+      
         ],
       });
       const usuarios = await devAgile.Usuario_Empresa.findAll({
