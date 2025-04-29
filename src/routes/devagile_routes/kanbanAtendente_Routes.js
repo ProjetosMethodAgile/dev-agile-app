@@ -14,6 +14,10 @@ router.post("/api/helpdesk/atendente/card/:sessao_id", (req, res) =>
   kanbanAtendenteController.vinculaAtendenteToCard_Controller(req, res)
 );
 
+// Rota para consultar todos atendentes
+router.get("/api/helpdesk/atendentes/all/:empresa_id", checkTokenLogin, (req, res) =>
+  kanbanAtendenteController.consultaTodosAtendente_Controller(req, res)
+);
 // Rota para consultar um atendente pelo ID
 router.get("/api/helpdesk/atendentes/:id", checkTokenLogin, (req, res) =>
   kanbanAtendenteController.consultaAtendente_Controller(req, res)
