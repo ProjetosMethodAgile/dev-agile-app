@@ -7,7 +7,7 @@ const { sendEmailRaw } = require("../../utils/sendEmailRaw.js");
 const ws = require("../../websocket.js");
 
 const kanban_acao_services = new kanban_Acao_Services();
-const camposObrigatorios = ["nome", "empID", "descricao"]; // a ação precisa estar vinculada a uma tela (permissao)
+const camposObrigatorios = ["nome", "empID", "descricao"];
 const empresa_service = new Empresa_Services();
 const kanbanCardsService = new KanbanCards_Services();
 
@@ -18,16 +18,22 @@ class Kanban_Acao_Controller extends Controller {
 
   async criaAcaoKanban_controller(req, res) {
     const data = req.body;
-    if (!data.nome || !data.descricao || !data.empID) {
-      return res.status(400).json({ message: "Preencha todos os campos" });
-    }
+    const isTrue = await this.allowNull(req, res);
     try {
-      const acao = await kanban_acao_services.criaAcaoKanban_Services(data);
-      if (!acao.error) {
-        console.log(acao);
-        return res
-          .status(200)
-          .json({ message: `Cadastro da ação realizada com sucesso` });
+      if (isTrue.status) {
+        const acao = await kanban_acao_services.criaAcaoKanban_Services(data);
+        if (!acao.error) {
+          console.log(acao);
+          return res
+            .status(200)
+            .json({ message: `Cadastro da ação realizada com sucesso` });
+        }
+      } else {
+        return res.status(500).json({
+          message: "Preencha todos os campos necessários",
+          campos: isTrue.campos,
+          error: true,
+        });
       }
     } catch (e) {
       console.error(e);
@@ -92,6 +98,7 @@ class Kanban_Acao_Controller extends Controller {
         .json({ message: e.message ? e.message : "Erro ao buscar registros" });
     }
   }
+
   async pegaTodosKanban_Acao_Controller(req, res) {
     try {
       const lista = await kanban_acao_services.pegaTodoskanban_Acao_Services();
@@ -233,6 +240,46 @@ class Kanban_Acao_Controller extends Controller {
         });
       }
       return res.status(200).json(ultimaMessage);
+    }
+  }
+
+  async changeStatusCard_Controller(req, res) {
+    const { nome_status, card_id } = req.body;
+    const { empresa, id } = req.user;
+    const user_id = id;
+    if (!nome_status && !card_id) {
+      return res.status(404).json({
+        error: true,
+        message: "preencha os campos necessarios",
+      });
+    }
+    const statusObj = await devAgile.KanbanStatusCard.findOne({
+      where: { nome: nome_status },
+    });
+
+    if (!statusObj) {
+      return res.status(404).json({
+        error: true,
+        message: "status não encontrado",
+      });
+    }
+
+    const cardUpdated = await kanban_acao_services.changeStatusCard_Services(
+      card_id,
+      statusObj,
+      empresa.id,
+      user_id
+    );
+    if (cardUpdated.status) {
+      ws.broadcast({ type: `cardUpdated-${cardUpdated.setor}`, cardUpdated });
+      return res
+        .status(200)
+        .json({ message: cardUpdated.message, error: false });
+    } else {
+      return res.status(404).json({
+        error: true,
+        message: "erro ao atualizar status",
+      });
     }
   }
 }
