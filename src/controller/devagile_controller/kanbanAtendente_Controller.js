@@ -42,17 +42,29 @@ class KanbanAtendente_Controller {
     return res.status(201).json(result.atendente);
   }
 
-  // Consulta um atendente pelo ID (incluindo os setores vinculados)
-  async consultaAtendente_Controller(req, res) {
-    const { id } = req.params;
-    const result = await this.kanbanAtendenteService.consultaAtendente_Services(
-      id
-    );
-    if (result.error) {
-      return res.status(404).json({ error: true, message: result.message });
-    }
-    return res.status(200).json(result.atendente);
+// Consulta um atendente pelo ID (incluindo os setores vinculados)
+async consultaAtendente_Controller(req, res) {
+  const { id } = req.params;
+  const result = await this.kanbanAtendenteService.consultaAtendente_Services(id);
+
+  if (result.error) {
+    return res.status(404).json({ error: true, message: result.message });
   }
+
+  return res.status(200).json(result.atendente);
+}
+
+// Consulta todos os atendentes de uma empresa (filtra por empresa_id)
+async consultaTodosAtendente_Controller(req, res) {
+  const { empresa_id } = req.params;  // passe o ID da empresa na rota, ex: GET /atendentes/all/:empresaId
+  const result = await this.kanbanAtendenteService.consultaTodosAtendente_Services(empresa_id);
+
+  if (result.error) {
+    return res.status(404).json({ error: true, message: result.message });
+  }
+
+  return res.status(200).json(result.atendentes);
+}
 
   // Deleta um atendente pelo ID
   async deletaAtendente_Controller(req, res) {
@@ -60,12 +72,33 @@ class KanbanAtendente_Controller {
     const result = await this.kanbanAtendenteService.deletaAtendente_Services(
       id
     );
+
+  
+    
     if (result.error) {
       return res.status(404).json({ error: true, message: result.message });
     }
     return res.status(200).json({ message: result.message });
   }
+  async ativaAtendente_controller(req, res) {
+    const { id } = req.params;
+    const result = await this.kanbanAtendenteService.ativaAtendente_Services(
+      id
+    );
 
+  
+    
+    if (result.error) {
+      return res.status(404).json({ error: true, message: result.message });
+    }
+    ws.broadcast({
+      type: `atendenteUpdated-${ result.message}`,
+      message: "Ativou o atendente",
+    });
+    return res.status(200).json({ message: result.message });
+  }
+
+  
   async consultaTodosAtendentesByEmpresaID_Controller(req, res) {
     const { id } = req.params;
 
@@ -105,6 +138,7 @@ class KanbanAtendente_Controller {
   async vinculaAtendenteToCard_Controller(req, res) {
     const { usuario_id } = req.body;
     const { sessao_id } = req.params;
+    const { empresa } = req.user;
 
     const sessao = await kanbanSessao_Services.pegaSessaoCardPorId_Services(
       sessao_id
@@ -134,7 +168,8 @@ class KanbanAtendente_Controller {
       await this.kanbanAtendenteService.vinculaAtendenteToCard_Services(
         atendente.id,
         sessao_id,
-        sessao.card_id
+        sessao.card_id,
+        empresa.id
       );
 
     if (!vinculo.error) {

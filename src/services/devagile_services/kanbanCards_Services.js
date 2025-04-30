@@ -61,25 +61,58 @@ class KanbanCards_Services {
     column_id,
     src_img_capa,
     titulo_chamado,
-    status,
     descricao,
     setor_id,
-    usuario_id
+    usuario_id,
+    empresa_id
   ) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
+      // 1) busca o status "Em Andamento"
+      const statusObj = await devAgile.KanbanStatusCard.findOne({
+        where: { nome: "Em Aberto" },
+        transaction,
+      });
+      if (!statusObj) throw new Error('Status "Em Aberto" não encontrado');
+
+      // 2) cria o card
       const card = await devAgile.KanbanCards.create(
-        { id: uuid.v4(), column_id, src_img_capa, titulo_chamado, status },
+        {
+          id: uuid.v4(),
+          column_id,
+          src_img_capa,
+          titulo_chamado,
+          status_card_id: statusObj.id,
+        },
         { transaction }
       );
-      if (!card) throw new Error("Erro ao cadastrar card");
 
+      // 3) registra no histórico
+      await devAgile.KanbanStatusHistory.create(
+        {
+          id: uuid.v4(),
+          card_id: card.id,
+          status_card_id: statusObj.id,
+          previous_status_card_id: null,
+          changed_by: null, // nenhum atendente ainda
+          usuario_id, // quem abriu o chamado
+          empresa_id: empresa_id,
+          setor_id,
+          action_type: "create_card",
+        },
+        { transaction }
+      );
+
+      // 4) cria a sessão
       const sessao = await devAgile.KanbanSessoes.create(
-        { id: uuid.v4(), card_id: card.id },
+        {
+          id: uuid.v4(),
+          card_id: card.id,
+        },
         { transaction }
       );
-      if (!sessao) throw new Error("Erro ao cadastrar sessão do card");
 
+      // 5) cria a mensagem inicial do cliente
       const message = await devAgile.KanbanSessoesMessages.create(
         {
           id: uuid.v4(),
@@ -88,21 +121,25 @@ class KanbanCards_Services {
           atendente_id: null,
           cliente_id: usuario_id,
           message_id: null,
+          system_msg: false,
         },
         { transaction }
       );
-      if (!message) throw new Error("Erro ao cadastrar mensagem da sessão");
 
       await transaction.commit();
-      console.log(`cardCreated-${setor_id}`);
+
+      // broadcast do novo card
       ws.broadcast({ type: `cardCreated-${setor_id}`, card });
+
       return {
         card,
+        createdMessage: message,
         error: false,
         message: "Cadastro realizado com sucesso",
-        createdMessage: message,
       };
     } catch (error) {
+      console.log(error);
+
       await transaction.rollback();
       return {
         error: true,
@@ -125,34 +162,84 @@ class KanbanCards_Services {
     bcc_email,
     subject,
     references,
+    system_msg,
   }) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
-      // Obtemos o sessao_id e o id da mensagem original (para vinculação via in_reply_to)
-      const { sessao_id } = originalMsg;
+      // 1) Busca sessão e card, trazendo coluna e setor
+      const sessao = await devAgile.KanbanSessoes.findByPk(
+        originalMsg.sessao_id,
+        { transaction }
+      );
+      if (!sessao) throw new Error("Sessão não encontrada");
 
-      // Cria a nova mensagem
-      // Aqui, se email_message_id for fornecido, o armazenamos no campo message_id,
-      // garantindo que o email que originou a resposta seja identificado.
+      const card = await devAgile.KanbanCards.findByPk(sessao.card_id, {
+        include: [
+          {
+            model: devAgile.KanbanComlumns,
+            as: "ColumnsCard",
+            include: [
+              {
+                model: devAgile.KanbanSetores,
+                as: "ColumnSetor",
+              },
+            ],
+          },
+        ],
+        transaction,
+      });
+      if (!card) throw new Error("Card não encontrado para a sessão");
+
+      // extrai os valores que precisamos
+      const column = card.ColumnsCard;
+      const setorId = column.setor_id;
+      const empresaId = column.ColumnSetor.empresa_id;
+      const columnName = column.nome;
+
+      // 2) cria a nova mensagem
       const newMsg = await devAgile.KanbanSessoesMessages.create(
         {
           id: uuid.v4(),
-          sessao_id,
+          sessao_id: sessao.id,
           atendente_id: atendente_id || null,
           cliente_id: cliente_id || null,
           content_msg: textBody,
-          in_reply_to: inReplyTo, // referencia a mensagem original
-          message_id: message_id || null, // grava o Message-ID do email, se existir
+          in_reply_to: inReplyTo,
+          message_id: message_id || null,
           from_email: from_email || null,
           to_email,
           cc_email,
           bcc_email,
           subject,
           references_email: references,
+          system_msg: !!system_msg,
         },
         { transaction }
       );
 
+      // 3) grava registro no histórico
+      await devAgile.KanbanStatusHistory.create(
+        {
+          id: uuid.v4(),
+          card_id: card.id,
+          status_card_id: card.status_card_id,
+          previous_status_card_id: card.status_card_id,
+          changed_by: atendente_id || null,
+          usuario_id: cliente_id || null,
+          empresa_id: empresaId,
+          setor_id: setorId,
+          action_type: system_msg
+            ? "message_system"
+            : atendente_id
+            ? "message_attendant"
+            : "message_client",
+          previous_column: columnName,
+          column_atual: columnName,
+        },
+        { transaction }
+      );
+
+      // 4) commit e retorno
       await transaction.commit();
       return { error: false, data: newMsg };
     } catch (err) {
@@ -213,27 +300,61 @@ class KanbanCards_Services {
     }
   }
 
-  async atualizaColumnCard_Services(card_id, new_column_id) {
+  async atualizaColumnCard_Services(
+    card_id,
+    new_column_id,
+    setor_id,
+    columnAtualName,
+    empresa_id,
+    changed_by
+  ) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
+      // 1) busca o card e seu status atual e empresa
       const card = await devAgile.KanbanCards.findOne({
         where: { id: card_id },
+        include: [{ model: devAgile.KanbanComlumns, as: "ColumnsCard" }],
+        transaction,
       });
+
       if (!card) throw new Error("Card não encontrado");
 
-      const column = await devAgile.KanbanComlumns.findOne({
-        where: { id: new_column_id },
-      });
-      if (!column) throw new Error("Coluna não encontrada");
+      const previousColumnName = card.ColumnsCard.nome;
+      const previousStatusId = card.status_card_id;
 
+      // 2) atualiza apenas a coluna
       await devAgile.KanbanCards.update(
         { column_id: new_column_id },
         { where: { id: card_id }, transaction }
       );
+
+      // 3) registra no histórico como 'column_move'
+      await devAgile.KanbanStatusHistory.create(
+        {
+          id: uuid.v4(),
+          card_id: card.id,
+          status_card_id: previousStatusId,
+          previous_status_card_id: previousStatusId,
+          changed_by, // o atendente que moveu
+          usuario_id: null, // não é ação de cliente
+          empresa_id,
+          setor_id,
+          action_type: "column_move",
+          previous_column: previousColumnName,
+          column_atual: columnAtualName,
+        },
+        { transaction }
+      );
+
       await transaction.commit();
+
+      // 4) broadcast genérico (se desejar)
       ws.broadcast({ type: "cardUpdated", card_id, new_column_id });
+
       return { error: false, message: "Coluna do card atualizada com sucesso" };
     } catch (error) {
+      console.log(error);
+
       await transaction.rollback();
       return {
         error: true,
@@ -244,15 +365,27 @@ class KanbanCards_Services {
 
   async pegaCardsPorSetorID_Services(setor_id) {
     try {
+      // 1) Busca colunas do setor
       const columns = await devAgile.KanbanComlumns.findAll({
         where: { setor_id },
       });
-      if (!columns || !columns.length) return [];
+      if (!columns.length) return [];
+
       const columnIds = columns.map((c) => c.id);
+
+      // 2) Busca cards, incluindo coluna, status e sessão
       const cards = await devAgile.KanbanCards.findAll({
         where: { column_id: { [Op.in]: columnIds } },
         include: [
-          { model: devAgile.KanbanComlumns, as: "ColumnsCard" },
+          {
+            model: devAgile.KanbanComlumns,
+            as: "ColumnsCard",
+          },
+          {
+            model: devAgile.KanbanStatusCard,
+            as: "status",
+            attributes: ["id", "nome", "descricao", "color"],
+          },
           {
             model: devAgile.KanbanSessoes,
             as: "CardSessao",
@@ -273,26 +406,32 @@ class KanbanCards_Services {
             ],
           },
         ],
+        attributes: [
+          "id",
+          "column_id",
+          "src_img_capa",
+          "titulo_chamado",
+          "status_card_id",
+          "createdAt",
+          "updatedAt",
+        ],
       });
 
-      // Extraia os IDs das sessões de cada card
+      // 3) Contagem de mensagens e anexos por sessão
       const sessionIds = cards
-        .filter((card) => card.CardSessao) // garante que CardSessao exista
-        .map((card) => card.CardSessao.id);
+        .filter((c) => c.CardSessao)
+        .map((c) => c.CardSessao.id);
 
-      // Consulta agregada para contar mensagens e anexos por sessão
       const messagesAndAttachments =
         await devAgile.KanbanSessoesMessages.findAll({
           attributes: [
             "sessao_id",
-            // Conta quantas mensagens únicas existem por sessão
             [
               sequelizeDevAgileCli.literal(
                 'COUNT(DISTINCT "KanbanSessoesMessages"."id")'
               ),
               "messagesCount",
             ],
-            // Conta quantos anexos únicos existem por sessão (via join com Attachments)
             [
               sequelizeDevAgileCli.literal(
                 'COUNT(DISTINCT "Attachments"."id")'
@@ -305,24 +444,36 @@ class KanbanCards_Services {
             {
               model: devAgile.KanbanSessoesMessagesAttachments,
               as: "Attachments",
-              attributes: [], // Não traz atributos dos anexos; serve só para o join
+              attributes: [],
             },
           ],
           group: ["sessao_id"],
           raw: true,
         });
 
-      // Agora, o objeto messagesAndAttachments conterá para cada sessao_id
-      // a quantidade de mensagens (messagesCount) e de anexos (attachmentsCount)
+      // 4) Projeção final do JSON para o front
       const cardsWithCounts = cards.map((card) => {
-        const sessaoId = card.CardSessao?.id;
-        const countInfo = messagesAndAttachments.find(
-          (info) => info.sessao_id === sessaoId
-        );
+        const json = card.toJSON();
+        const counts = messagesAndAttachments.find(
+          (m) => m.sessao_id === json.CardSessao?.id
+        ) || {
+          messagesCount: 0,
+          attachmentsCount: 0,
+        };
+
         return {
-          ...card.toJSON(),
-          messagesCount: countInfo ? countInfo.messagesCount : 0,
-          attachmentsCount: countInfo ? countInfo.attachmentsCount : 0,
+          id: json.id,
+          column_id: json.column_id,
+          src_img_capa: json.src_img_capa,
+          titulo_chamado: json.titulo_chamado,
+          status_card_id: json.status_card_id,
+          status: json.status, // objeto { id, nome, descricao?, color? }
+          createdAt: json.createdAt,
+          updatedAt: json.updatedAt,
+          ColumnsCard: json.ColumnsCard,
+          CardSessao: json.CardSessao,
+          messagesCount: counts.messagesCount,
+          attachmentsCount: counts.attachmentsCount,
         };
       });
 
@@ -336,6 +487,18 @@ class KanbanCards_Services {
     try {
       const card = await devAgile.KanbanCards.findOne({
         where: { id: card_id },
+
+        // *** Aqui usamos createdAt/updatedAt (camelCase) ***
+        attributes: [
+          "id",
+          "column_id",
+          "src_img_capa",
+          "titulo_chamado",
+          "status_card_id",
+          "createdAt",
+          "updatedAt",
+        ],
+
         include: [
           {
             model: devAgile.KanbanComlumns,
@@ -343,14 +506,20 @@ class KanbanCards_Services {
             attributes: ["nome"],
           },
           {
+            model: devAgile.KanbanStatusCard,
+            as: "status",
+            attributes: ["id", "nome", "color"],
+          },
+          {
             model: devAgile.KanbanSessoes,
             as: "CardSessao",
-            attributes: ["id"],
+            attributes: ["id", "createdAt", "updatedAt"],
             include: [
               {
                 model: devAgile.KanbanAtendenteHelpDesk,
                 as: "atendentesVinculados",
-                attributes: ["createdAt"],
+                // idem: camelCase aqui também
+                attributes: ["id", "createdAt"],
                 include: [
                   {
                     model: devAgile.Usuario,
@@ -371,11 +540,13 @@ class KanbanCards_Services {
                   "cc_email",
                   "subject",
                   "atendente_id",
+                  "system_msg",
                   "cliente_id",
                   "content_msg",
                   "createdAt",
                   "updatedAt",
                 ],
+                separate: true,
                 order: [["createdAt", "ASC"]],
                 include: [
                   {
@@ -401,9 +572,10 @@ class KanbanCards_Services {
           },
         ],
       });
-      return card;
+
+      return card?.toJSON() ?? null;
     } catch (error) {
-      throw new Error("Erro ao buscar cards: " + error.message);
+      throw new Error("Erro ao buscar card: " + error.message);
     }
   }
 }
