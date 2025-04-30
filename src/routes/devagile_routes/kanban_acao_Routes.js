@@ -25,8 +25,12 @@ route.get("/api/helpdesk/acoes/empresa/:id", checkTokenLogin, (req, res) =>
   kanban_acao_controller.pegaTodosAcaoPorEmpresa_Controller(req, res)
 );
 
-route.post("/api/helpdesk/acao/sendMail", (req, res) =>
+route.post("/api/helpdesk/acao/sendMail", checkTokenLogin, (req, res) =>
   kanban_acao_controller.sendEmailPorChangeColumn_Controller(req, res)
+);
+
+route.post("/api/helpdesk/acao/changeStatusCard", checkTokenLogin, (req, res) =>
+  kanban_acao_controller.changeStatusCard_Controller(req, res)
 );
 
 module.exports = route;
