@@ -1,4 +1,5 @@
 const { devAgile } = require("../../models");
+const jwt = require("jsonwebtoken");
 const KanbanCards_Services = require("../../services/devagile_services/kanbanCards_Services");
 const KanbanSetores_Services = require("../../services/devagile_services/kanbanSetores_Services");
 const KanbanAtendente_Services = require("../../services/devagile_services/kanbanAtendente_Services");
@@ -115,14 +116,8 @@ class KanbanCards_Controller extends Controller {
   // método para cadastro com usuário autenticado
   async cadastraCardAuth_Controller(req, res) {
     try {
-      const {
-        setor_id,
-        src_img_capa,
-        titulo_chamado,
-        status,
-        descricao,
-        usuario_id,
-      } = req.body;
+      const { setor_id, src_img_capa, titulo_chamado, descricao, usuario_id } =
+        req.body;
       const usuario = await usuarioServices.pegaUsuarioPorId_Services(
         usuario_id
       );
@@ -164,10 +159,10 @@ class KanbanCards_Controller extends Controller {
         column.id,
         src_img_capa,
         titulo_chamado,
-        status,
         descricao,
         setor_id,
-        usuario_id
+        usuario_id,
+        setorResult.setor.empresa_id
       );
       if (result.error) {
         return res.status(404).json({
@@ -390,9 +385,20 @@ class KanbanCards_Controller extends Controller {
 
         if (!validaAtendenteSessao) {
           //vincula atendente caso ja não esteja
+          const authHeader = req.headers["authorization"];
+          const token = authHeader && authHeader.split(" ")[1];
+          const secret = process.env.SECRET_LOGIN;
+          const decoded = jwt.verify(token, secret);
+          console.log(decoded.empresa.id);
+          const card = await devAgile.KanbanSessoes.findOne({
+            where: { id: newMessage.data.sessao_id },
+          });
+
           await kanbanAtendente_Services.vinculaAtendenteToCard_Services(
             atendente_id,
-            newMessage.data.sessao_id
+            newMessage.data.sessao_id,
+            card.card_id,
+            decoded.empresa.id
           );
         }
 
@@ -502,6 +508,8 @@ class KanbanCards_Controller extends Controller {
       }
       return res.status(200).json(card);
     } catch (error) {
+      console.log(error);
+
       return res.status(500).json({ error: "Erro ao buscar dados" });
     }
   }
@@ -509,6 +517,8 @@ class KanbanCards_Controller extends Controller {
   async atualizaColumnCard_Controller(req, res) {
     try {
       const { card_id, new_column_id, setor_id } = req.body;
+      const usuario_id = req.user.id;
+
       if (!card_id || !new_column_id) {
         return res.status(400).json({
           error: true,
@@ -523,16 +533,34 @@ class KanbanCards_Controller extends Controller {
           .status(404)
           .json({ error: true, message: "Coluna não encontrada" });
       }
+      const columnAtualName = column.nome;
+      const atendente = await devAgile.KanbanAtendenteHelpDesk.findOne({
+        where: { usuario_id },
+      });
+      if (!atendente) {
+        return res
+          .status(404)
+          .json({ error: true, message: "atendente não encontrado" });
+      }
+
+      const changed_by = atendente.id;
       const result = await kanbanCardsService.atualizaColumnCard_Services(
         card_id,
-        new_column_id
+        new_column_id,
+        column.setor_id,
+        columnAtualName,
+        atendente.empresa_id,
+        changed_by
       );
+
       ws.broadcast({ type: `cardUpdated-${setor_id}`, result });
       if (result.error) {
         return res.status(400).json({ error: true, message: result.message });
       }
       return res.status(200).json({ error: false, message: result.message });
     } catch (error) {
+      console.log(error);
+
       return res.status(500).json({ error: true, message: error.message });
     }
   }

@@ -46,7 +46,10 @@ module.exports = (sequelize, DataTypes) => {
         as: "ClienteMessage",
       });
 
-      
+      Usuario.hasMany(models.KanbanStatusHistory, {
+        foreignKey: "usuario_id",
+        as: "statusHistories",
+      });
     }
   }
 
@@ -56,7 +59,7 @@ module.exports = (sequelize, DataTypes) => {
       email: DataTypes.STRING,
       senha: DataTypes.STRING,
       contato: DataTypes.STRING,
-      status: DataTypes.STRING
+      status: DataTypes.STRING,
     },
     {
       sequelize,

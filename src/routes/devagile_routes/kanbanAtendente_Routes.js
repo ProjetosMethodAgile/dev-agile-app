@@ -10,8 +10,11 @@ router.post("/api/helpdesk/atendentes", checkTokenLogin, (req, res) =>
   kanbanAtendenteController.criaAtendente_Controller(req, res)
 );
 
-router.post("/api/helpdesk/atendente/card/:sessao_id", (req, res) =>
-  kanbanAtendenteController.vinculaAtendenteToCard_Controller(req, res)
+router.post(
+  "/api/helpdesk/atendente/card/:sessao_id",
+  checkTokenLogin,
+  (req, res) =>
+    kanbanAtendenteController.vinculaAtendenteToCard_Controller(req, res)
 );
 
 // Rota para consultar um atendente pelo ID
