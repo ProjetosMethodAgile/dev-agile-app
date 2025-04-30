@@ -1,11 +1,14 @@
 const Usuario_Services = require("../../services/devagile_services/Usuario_Services");
 const Controller = require("../Controller");
 const bcrypt = require("bcrypt");
+const fs = require("fs");
+const path = require("path");
+const { sendEmailRaw } = require("../../utils/sendEmailRaw.js");
 const { devAgile } = require("../../models/index.js");
+const Empresa_Services = require("../../services/devagile_services/Empresa_Services.js");
 const camposObrigatorios = [
   "nome",
   "email",
-  "senha",
   "contato",
   "roles_id",
   "permissoes",
@@ -13,6 +16,7 @@ const camposObrigatorios = [
 ];
 
 const usuario_services = new Usuario_Services();
+const empresa_services = new Empresa_Services();
 
 class Usuario_Controller extends Controller {
   constructor() {
@@ -96,9 +100,52 @@ class Usuario_Controller extends Controller {
           .json({ message: "Empresa não encontrada", error: true });
       }
 
+      //Pega a empresa pelo id e recupera a tagName
+      const { tag } = await empresa_services.pegaEmpresaPorId_Services(
+        empresa_id
+      );
+
+      // Função para gerar uma senha aleatória de 8 caracteres alfabeticos
+      const createRandomPassword = () => {
+        const caracteres =
+          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let senha = "";
+        for (let i = 0; i < 6; i++) {
+          const randomIndex = Math.floor(Math.random() * caracteres.length);
+          senha += caracteres[randomIndex];
+        }
+        return senha;
+      };
+
+      // Gera a senha aleatória
+      const senhaGerada = createRandomPassword();
+
+      //Pega template de email e substitui as variaveis
+      const templatePath = path.join(
+        __dirname,
+        "..",
+        "..",
+        "utils",
+        "templates",
+        "email",
+        "new-user-password.html"
+      );
+      const htmlTemplate = fs.readFileSync(templatePath, "utf8");
+      const htmlContent = htmlTemplate
+        .replace("{{NOME_USUARIO}}", bodyReq.nome)
+        .replace("{{SENHA_TEMPORARIA}}", senhaGerada)
+        .replace("{{TAG_EMPRESA}}", tag);
+
+      // envia o email com a senha criptografadas
+      sendEmailRaw({
+        to: email,
+        subject: "Cadastro de Usuário",
+        html: htmlContent,
+      });
+
       // Gera a senha criptografada
       const salt = await bcrypt.genSalt(12);
-      const senhaHash = await bcrypt.hash(bodyReq.senha, salt);
+      const senhaHash = await bcrypt.hash(senhaGerada, salt);
       bodyReq.senha = senhaHash;
 
       // Chama o serviço para registrar o usuário com o novo formato de permissões
@@ -106,6 +153,7 @@ class Usuario_Controller extends Controller {
         bodyReq,
         permissoesComSubtelas
       );
+
       if (createUser.status) {
         return res.status(200).json({
           message: `Usuário cadastrado e vinculado à empresa com sucesso`,
@@ -180,9 +228,11 @@ class Usuario_Controller extends Controller {
         message: "E-mail ou Senha incorreta",
       });
     }
+
     return res.status(200).json({
       message: "Autenticação realizada com sucesso",
       token: checkSenha.token,
+      primeiroAcesso: usuario.primeiro_acesso,
       error: false,
     });
   }
@@ -243,7 +293,8 @@ class Usuario_Controller extends Controller {
 
   async atualizaUsuario_Controller(req, res) {
     const { id } = req.params;
-    let { nome, email,status, roles_id,contato, permissoesCRUD, senha } = req.body;
+    let { nome, email, status, roles_id, contato, permissoesCRUD, senha } =
+      req.body;
 
     try {
       if (!Array.isArray(permissoesCRUD)) {
