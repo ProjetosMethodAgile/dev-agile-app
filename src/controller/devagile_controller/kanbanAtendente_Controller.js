@@ -138,6 +138,7 @@ async consultaTodosAtendente_Controller(req, res) {
   async vinculaAtendenteToCard_Controller(req, res) {
     const { usuario_id } = req.body;
     const { sessao_id } = req.params;
+    const { empresa } = req.user;
 
     const sessao = await kanbanSessao_Services.pegaSessaoCardPorId_Services(
       sessao_id
@@ -167,7 +168,8 @@ async consultaTodosAtendente_Controller(req, res) {
       await this.kanbanAtendenteService.vinculaAtendenteToCard_Services(
         atendente.id,
         sessao_id,
-        sessao.card_id
+        sessao.card_id,
+        empresa.id
       );
 
     if (!vinculo.error) {

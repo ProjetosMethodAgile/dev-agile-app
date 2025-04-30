@@ -1,5 +1,5 @@
 const Services = require("../Services.js");
-const { devAgile } = require("../../models/index.js");
+const { devAgile, sequelizeDevAgileCli } = require("../../models/index.js");
 const uuid = require("uuid");
 const ws = require("../../websocket.js");
 
@@ -36,22 +36,61 @@ class KanbanAtendente_Services extends Services {
     }
   }
 
-  async vinculaAtendenteToCard_Services(atendente_id, sessao_id, card_id) {
+  async vinculaAtendenteToCard_Services(
+    atendente_id,
+    sessao_id,
+    card_id,
+    empresa_id
+  ) {
     let vinculo;
-    try {
-      vinculo = await devAgile.KanbanSessoesAtendentes.create({
-        id: uuid.v4(),
-        sessao_id,
-        atendente_id,
-        visualizacao_atendente: true,
-      });
+    const transaction = await sequelizeDevAgileCli.transaction();
 
+    try {
+      const card = await devAgile.KanbanCards.findOne({
+        where: { id: card_id },
+        include: [{ model: devAgile.KanbanComlumns, as: "ColumnsCard" }],
+        transaction,
+      });
+      if (!card) throw new Error("Card não encontrado");
+
+      const previousColumnName = card.ColumnsCard.nome;
+      const previousStatusId = card.status_card_id;
+
+      vinculo = await devAgile.KanbanSessoesAtendentes.create(
+        {
+          id: uuid.v4(),
+          sessao_id,
+          atendente_id,
+          visualizacao_atendente: true,
+        },
+        { transaction }
+      );
+
+      await devAgile.KanbanStatusHistory.create(
+        {
+          id: uuid.v4(),
+          card_id: card_id,
+          status_card_id: previousStatusId,
+          previous_status_card_id: previousStatusId,
+          changed_by: atendente_id,
+          usuario_id: null, // não é ação de cliente
+          empresa_id,
+          setor_id: card.ColumnsCard.setor_id,
+          action_type: "vinculo_atendente",
+          previous_column: previousColumnName,
+          column_atual: previousColumnName,
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
       ws.broadcast({
         type: `cardUpdated-${card_id}`,
         message: "atendente vinculado ao card",
       });
       return { vinculo, error: false };
     } catch (error) {
+      await transaction.rollback();
       console.log(error);
       return { vinculo, error: true };
     }
