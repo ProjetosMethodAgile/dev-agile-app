@@ -550,6 +550,7 @@ class Usuario_Services extends Services {
 
   async atualizaUsuario_Services(userId, data) {
     const transaction = await sequelizeDevAgileCli.transaction();
+    console.log("Dados do usuário:", data);
     try {
       // 1. Atualizar dados básicos do usuário
       if (!data.senha) {
@@ -560,6 +561,7 @@ class Usuario_Services extends Services {
             contato: data.contato,
             status: data.status,
             empresa_id: data.empresa_id,
+            primeiro_acesso: data.primeiro_acesso,
           },
           { where: { id: userId }, transaction }
         );
@@ -572,6 +574,7 @@ class Usuario_Services extends Services {
             contato: data.contato,
             status: data.status,
             empresa_id: data.empresa_id,
+            primeiro_acesso: data.primeiro_acesso,
           },
           { where: { id: userId }, transaction }
         );
@@ -637,7 +640,6 @@ class Usuario_Services extends Services {
         },
         { where: { usuario_id: userId }, transaction }
       );
-      console.log(data.role_id);
 
       // Commit da transação
       await transaction.commit();

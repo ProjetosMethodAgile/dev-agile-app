@@ -293,53 +293,68 @@ class Usuario_Controller extends Controller {
 
   async atualizaUsuario_Controller(req, res) {
     const { id } = req.params;
-    let { nome, email, status, roles_id, contato, permissoesCRUD, senha } =
-      req.body;
-
+    let {
+      nome,
+      email,
+      status,
+      roles_id,
+      contato,
+      permissoesCRUD,
+      senha,
+      primeiro_acesso,
+    } = req.body;
+  
     try {
-      if (!Array.isArray(permissoesCRUD)) {
-        return res.status(400).json({
-          message: "permissoesCRUD deve ser um array válido",
-          error: true,
+      // Se permissoesCRUD for definido, deve ser um array válido
+      if (typeof permissoesCRUD !== "undefined") {
+        if (!Array.isArray(permissoesCRUD)) {
+          return res.status(400).json({
+            message: "permissoesCRUD deve ser um array válido",
+            error: true,
+          });
+        }
+  
+        const invalidPermissoes = permissoesCRUD.some((permissao) => {
+          return (
+            !permissao.permissao_id ||
+            typeof permissao.acessos.can_create === "undefined" ||
+            typeof permissao.acessos.can_read === "undefined" ||
+            typeof permissao.acessos.can_update === "undefined" ||
+            typeof permissao.acessos.can_delete === "undefined"
+          );
         });
+  
+        if (invalidPermissoes) {
+          return res.status(400).json({
+            message:
+              "As permissões CRUD fornecidas estão incompletas ou inválidas",
+            error: true,
+          });
+        }
       }
-
-      // Validação das permissões CRUD
-      const invalidPermissoes = permissoesCRUD.some((permissao) => {
-        return (
-          !permissao.permissao_id ||
-          typeof permissao.acessos.can_create === "undefined" ||
-          typeof permissao.acessos.can_read === "undefined" ||
-          typeof permissao.acessos.can_update === "undefined" ||
-          typeof permissao.acessos.can_delete === "undefined"
-        );
-      });
-
-      if (invalidPermissoes) {
-        return res.status(400).json({
-          message:
-            "As permissões CRUD fornecidas estão incompletas ou inválidas",
-          error: true,
-        });
-      }
-
+  
       if (senha) {
         const salt = await bcrypt.genSalt(12);
-        let senhaHash = await bcrypt.hash(senha, salt);
-        senha = senhaHash;
+        senha = await bcrypt.hash(senha, salt);
       }
-
-      // Atualiza usuário chamando o serviço com as permissões completas
-      const result = await usuario_services.atualizaUsuario_Services(id, {
+  
+      // Monta o objeto de dados para enviar ao service
+      const dataToUpdate = {
         nome,
         email,
         contato,
         status,
         senha,
         roles_id,
-        permissoesCRUD,
-      });
-
+        primeiro_acesso,
+      };
+  
+      if (typeof permissoesCRUD !== "undefined") {
+        dataToUpdate.permissoesCRUD = permissoesCRUD;
+      }
+  
+      const result = await usuario_services.atualizaUsuario_Services(id, dataToUpdate);
+  
       if (result.status) {
         return res.status(200).json({
           message: "Usuário atualizado com sucesso!",
@@ -359,7 +374,7 @@ class Usuario_Controller extends Controller {
       });
     }
   }
-
+  
   async deletaUsuarioPorId_Controller(req, res) {
     const { id } = req.params;
 
