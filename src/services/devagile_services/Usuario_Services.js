@@ -425,6 +425,7 @@ class Usuario_Services extends Services {
         email: usuario.email,
         contato: usuario.contato,
         status: usuario.status,
+        primeiro_acesso: usuario.primeiro_acesso,
         empresa: usuario.empresas,
         usuario_roles: usuario.usuario_roles,
         permissoes: permissoesEstruturadas,
