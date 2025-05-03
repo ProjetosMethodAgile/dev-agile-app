@@ -97,6 +97,23 @@ async consultaTodosAtendente_Controller(req, res) {
     });
     return res.status(200).json({ message: result.message });
   }
+  async desativaSetorAtendente_controller(req, res) {
+    const { id } = req.params;
+    const result = await this.kanbanAtendenteService.desativaAtendenteSetores_Services(
+      id
+    );
+
+  
+    
+    if (result.error) {
+      return res.status(404).json({ error: true, message: result.message });
+    }
+    ws.broadcast({
+      type: `atendenteUpdated-${ result.message}`,
+      message: "Ativou o atendente",
+    });
+    return res.status(200).json({ message: result.message });
+  }
 
   
   async consultaTodosAtendentesByEmpresaID_Controller(req, res) {

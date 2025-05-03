@@ -53,5 +53,9 @@ router.delete("/api/helpdesk/atendentes/:id", checkTokenLogin, (req, res) =>
 router.put("/api/helpdesk/atendentes/ativo/:id", checkTokenLogin, (req, res) =>
   kanbanAtendenteController.ativaAtendente_controller(req, res)
 );
+//desativa unico setor
+router.put("/api/helpdesk/atendentes/setor/ativo/:id", checkTokenLogin, (req, res) =>
+  kanbanAtendenteController.desativaSetorAtendente_controller(req, res)
+);
 
 module.exports = router;
