@@ -207,7 +207,7 @@ class Kanban_Acao_Controller extends Controller {
 
         //pegando id da message enviada por email para o usuario e concatenando com o dominio do AWS SES para a validação na lambda comparar e atribuir os valores
         const messageId = emailToUsrResponse.MessageId;
-        const formattedMessageId = `<${messageId}@sa-east-1.amazonses.com>`;
+        const formattedMessageId = `<${messageId}@${process.env.AWS_REGION_SES}`;
 
         // let atendente_id = "";
         // let cliente_id = "";
