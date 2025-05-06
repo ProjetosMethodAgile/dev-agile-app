@@ -6,6 +6,7 @@ const path = require("path");
 const { sendEmailRaw } = require("../../utils/sendEmailRaw.js");
 const { devAgile } = require("../../models/index.js");
 const Empresa_Services = require("../../services/devagile_services/Empresa_Services.js");
+const e = require("cors");
 const camposObrigatorios = [
   "nome",
   "email",
@@ -174,6 +175,99 @@ class Usuario_Controller extends Controller {
     }
   }
 
+  async resetaSenhaUsuario_Controller(req, res) {
+    const { email, empresa_id } = req.body;
+    const { id } = req.params;
+    const bodyReq = req.body;
+
+    try {
+      // Verifica se o usuário existe
+      const userExist = await usuario_services.pegaUsuarioPorEmail_Services(
+        email
+      );
+      console.log("teste:", userExist);
+
+      if (!userExist.status) {
+        return res.status(422).json({
+          message: "O usuario não existe",
+          error: true,
+        });
+      }
+
+      //Pega a empresa pelo id e recupera a tagName
+      const { tag } = await empresa_services.pegaEmpresaPorId_Services(
+        empresa_id
+      );
+
+      // Função para gerar uma senha aleatória de 8 caracteres alfabeticos
+      const createRandomPassword = () => {
+        const caracteres =
+          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let senha = "";
+        for (let i = 0; i < 6; i++) {
+          const randomIndex = Math.floor(Math.random() * caracteres.length);
+          senha += caracteres[randomIndex];
+        }
+        return senha;
+      };
+
+      // Gera a senha aleatória
+      const senhaGerada = createRandomPassword();
+
+      //Pega template de email e substitui as variaveis
+      const templatePath = path.join(
+        __dirname,
+        "..",
+        "..",
+        "utils",
+        "templates",
+        "email",
+        "reset-password.html"
+      );
+      const htmlTemplate = fs.readFileSync(templatePath, "utf8");
+      const htmlContent = htmlTemplate
+        .replace("{{NOME_USUARIO}}", userExist.retorno.nome)
+        .replace("{{SENHA_TEMPORARIA}}", senhaGerada)
+        .replace("{{TAG_EMPRESA}}", tag);
+
+      // envia o email com a senha criptografadas
+      sendEmailRaw({
+        to: email,
+        subject: "Redefinição de senha DevAgile",
+        html: htmlContent,
+      });
+
+      // Gera a senha criptografada
+      const salt = await bcrypt.genSalt(12);
+      const senhaHash = await bcrypt.hash(senhaGerada, salt);
+      bodyReq.senha = senhaHash;
+
+      const updateUser = await usuario_services.atualizaUsuario_Services(
+        id,
+        bodyReq
+      );
+
+      if (updateUser.status) {
+        return res.status(200).json({
+          message: `Senha redefinida com sucesso`,
+          error: false,
+        });
+      } else {
+        return res.status(500).json({
+          message: updateUser.message || "Erro ao redefinir a senha",
+          error: true,
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({
+        message:
+          "Erro completar solicitação, contate o administrador do sistema",
+        error: true,
+      });
+    }
+  }
+
   // Login do usuário
   async loginUsuario_Controller(req, res) {
     const { email, senha, empresaId, empresaTag } = req.body;
@@ -303,7 +397,7 @@ class Usuario_Controller extends Controller {
       senha,
       primeiro_acesso,
     } = req.body;
-  
+
     try {
       // Se permissoesCRUD for definido, deve ser um array válido
       if (typeof permissoesCRUD !== "undefined") {
@@ -313,7 +407,7 @@ class Usuario_Controller extends Controller {
             error: true,
           });
         }
-  
+
         const invalidPermissoes = permissoesCRUD.some((permissao) => {
           return (
             !permissao.permissao_id ||
@@ -323,7 +417,7 @@ class Usuario_Controller extends Controller {
             typeof permissao.acessos.can_delete === "undefined"
           );
         });
-  
+
         if (invalidPermissoes) {
           return res.status(400).json({
             message:
@@ -332,12 +426,12 @@ class Usuario_Controller extends Controller {
           });
         }
       }
-  
+
       if (senha) {
         const salt = await bcrypt.genSalt(12);
         senha = await bcrypt.hash(senha, salt);
       }
-  
+
       // Monta o objeto de dados para enviar ao service
       const dataToUpdate = {
         nome,
@@ -348,13 +442,16 @@ class Usuario_Controller extends Controller {
         roles_id,
         primeiro_acesso,
       };
-  
+
       if (typeof permissoesCRUD !== "undefined") {
         dataToUpdate.permissoesCRUD = permissoesCRUD;
       }
-  
-      const result = await usuario_services.atualizaUsuario_Services(id, dataToUpdate);
-  
+
+      const result = await usuario_services.atualizaUsuario_Services(
+        id,
+        dataToUpdate
+      );
+
       if (result.status) {
         return res.status(200).json({
           message: "Usuário atualizado com sucesso!",
@@ -374,7 +471,7 @@ class Usuario_Controller extends Controller {
       });
     }
   }
-  
+
   async deletaUsuarioPorId_Controller(req, res) {
     const { id } = req.params;
 

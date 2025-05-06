@@ -551,7 +551,7 @@ class Usuario_Services extends Services {
 
   async atualizaUsuario_Services(userId, data) {
     const transaction = await sequelizeDevAgileCli.transaction();
-    console.log("Dados do usuário:", data);
+
     try {
       // 1. Atualizar dados básicos do usuário
       if (!data.senha) {

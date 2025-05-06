@@ -30,6 +30,10 @@ route.post("/api/usuario/register", checkTokenLogin, (req, res) =>
   usuario_controller.registerUsuario_Controller(req, res)
 );
 
+route.post("/api/usuario/reset-password/:id", checkTokenLogin, (req, res) =>
+  usuario_controller.resetaSenhaUsuario_Controller(req, res)
+);
+
 route.delete("/api/usuario/:id", checkTokenLogin, (req, res) => {
   usuario_controller.deletaUsuarioPorId_Controller(req, res);
 });
