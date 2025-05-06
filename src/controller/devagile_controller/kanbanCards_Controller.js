@@ -147,7 +147,7 @@ class KanbanCards_Controller extends Controller {
       }
       const setor = setorResult.setor;
       const column = await devAgile.KanbanComlumns.findOne({
-        where: { setor_id, posicao: "0" },
+        where: { setor_id, posicao: "1" },
       });
       if (!column) {
         return res.status(404).json({
