@@ -243,6 +243,8 @@ class KanbanCards_Services {
       await transaction.commit();
       return { error: false, data: newMsg };
     } catch (err) {
+      console.log("ERRO AO ENVIAR MENSSAGEM");
+      console.log(err);
       await transaction.rollback();
       return { error: true, message: err.message };
     }
