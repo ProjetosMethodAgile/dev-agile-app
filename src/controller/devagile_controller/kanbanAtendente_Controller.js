@@ -54,18 +54,6 @@ async consultaAtendente_Controller(req, res) {
   return res.status(200).json(result.atendente);
 }
 
-// Consulta um atendente pelo ID e empresa
-async consultaAtendente_Controller(req, res) {
-  const { id, empresa_id } = req.params;
-  const result = await this.kanbanAtendenteService.consultaAtendenteidandEmp_Services(id,empresa_id);
-
-  if (result.error) {
-    return res.status(404).json({ error: true, message: result.message });
-  }
-
-  return res.status(200).json(result.atendente);
-}
-
 // Consulta todos os atendentes de uma empresa (filtra por empresa_id)
 async consultaTodosAtendente_Controller(req, res) {
   const { empresa_id } = req.params;  // passe o ID da empresa na rota, ex: GET /atendentes/all/:empresaId
