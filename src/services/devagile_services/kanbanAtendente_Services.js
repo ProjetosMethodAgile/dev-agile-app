@@ -82,6 +82,40 @@ class KanbanAtendente_Services extends Services {
       return { error: true, message: "Erro ao consultar atendente" };
     }
   }
+  async consultaAtendenteidandEmp_Services(id, empresa_id) {
+    try {
+      const atendente = await devAgile[this.nomeModel].findOne({
+        include: [
+          {
+            model: devAgile.KanbanSetores,
+            as: 'Setores',
+            through: { attributes: [] },
+            // só traz os setores vinculados à empresa passada
+            where: { empresa_id },
+            required: true
+          },
+          {
+            model: devAgile.Usuario,
+            as: 'UsuarioAtendente',
+            where: { id },
+            attributes: []
+          },
+        ],
+      });
+  
+      if (!atendente) {
+        return { error: true, message: 'Atendente não encontrado para esta empresa' };
+      }
+  
+      return { error: false, atendente };
+    } catch (err) {
+      console.error('Erro ao consultar atendente:', err);
+      return { error: true, message: 'Erro ao consultar atendente' };
+    }
+  }
+  
+
+
   async consultaTodosAtendente_Services(empresaId) {
     try {
 

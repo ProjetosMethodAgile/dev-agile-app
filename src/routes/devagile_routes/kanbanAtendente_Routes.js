@@ -22,6 +22,9 @@ router.get("/api/helpdesk/atendentes/all/:empresa_id", checkTokenLogin, (req, re
 router.get("/api/helpdesk/atendentes/:id", checkTokenLogin, (req, res) =>
   kanbanAtendenteController.consultaAtendente_Controller(req, res)
 );
+router.get("/api/helpdesk/atendentes/:id/empresa/:empresa_id", checkTokenLogin, (req, res) =>
+  kanbanAtendenteController.consultaAtendente_Controller(req, res)
+);
 
 router.get(
   "/api/helpdesk/atendentes/empresa/:id",
