@@ -13,6 +13,8 @@ const kanban_atendente_route = require("./devagile_routes/kanbanAtendente_Routes
 const kanban_column_route = require("./devagile_routes/kanbanColumns_Routes");
 const kanban_acao_routes = require("./devagile_routes/kanban_acao_Routes");
 const kanban_cards_route = require("./devagile_routes/kanbanCards_Routes");
+const kanbanDashboard_routes = require("./devagile_routes/kanbanDashboard_routes");
+
 const cors = require("cors");
 
 module.exports = (app) => {
@@ -32,4 +34,5 @@ module.exports = (app) => {
   app.use(kanban_column_route);
   app.use(kanban_acao_routes);
   app.use(kanban_cards_route);
+  app.use(kanbanDashboard_routes);
 };

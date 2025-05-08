@@ -20,6 +20,7 @@ module.exports = {
         "create_card",
         "column_move",
         "status_change",
+        "message_system",
         "message_client",
         "message_attendant",
         "vinculo_atendente"

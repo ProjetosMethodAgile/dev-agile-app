@@ -2,7 +2,6 @@
 
 const fs = require("fs");
 const path = require("path");
-const sequelize = require("sequelize");
 const Sequelize = require("sequelize");
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || "development";
@@ -14,13 +13,28 @@ const sequelizeERP = new Sequelize(
   dbConfig.erp.database,
   dbConfig.erp.username,
   dbConfig.erp.password,
-  dbConfig.erp
+  {
+    ...dbConfig.erp,
+    timezone: "-03:00",
+    dialectOptions: {
+      ...dbConfig.erp.dialectOptions,
+      useUTC: false,
+    },
+  }
 );
+
 const sequelizeDevAgileCli = new Sequelize(
   dbConfig.devAgile.database,
   dbConfig.devAgile.username,
   dbConfig.devAgile.password,
-  dbConfig.devAgile
+  {
+    ...dbConfig.devAgile,
+    timezone: "-03:00",
+    dialectOptions: {
+      ...dbConfig.devAgile.dialectOptions,
+      useUTC: false,
+    },
+  }
 );
 
 // Função para inicializar os models para cada banco de dados

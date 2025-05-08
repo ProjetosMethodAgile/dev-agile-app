@@ -59,6 +59,7 @@ class KanbanCards_Services {
 
   async cadastraCardAuth_Services(
     column_id,
+    motivo_id,
     src_img_capa,
     titulo_chamado,
     descricao,
@@ -68,14 +69,22 @@ class KanbanCards_Services {
   ) {
     const transaction = await sequelizeDevAgileCli.transaction();
     try {
-      // 1) busca o status "Em Andamento"
+      // 1) busca o status "Em Aberto"
       const statusObj = await devAgile.KanbanStatusCard.findOne({
         where: { nome: "Em Aberto" },
         transaction,
       });
       if (!statusObj) throw new Error('Status "Em Aberto" não encontrado');
 
-      // 2) cria o card
+      // 2) busca SLA do motivo e calcula sla_due_at
+      const motivo = await devAgile.KanbanMotivos.findByPk(motivo_id, {
+        transaction,
+      });
+      if (!motivo) throw new Error("Motivo não encontrado");
+      const slaDueAt = new Date();
+      slaDueAt.setMinutes(slaDueAt.getMinutes() + motivo.sla_minutes);
+
+      // 3) cria o card
       const card = await devAgile.KanbanCards.create(
         {
           id: uuid.v4(),
@@ -83,27 +92,29 @@ class KanbanCards_Services {
           src_img_capa,
           titulo_chamado,
           status_card_id: statusObj.id,
+          motivo_id,
+          sla_due_at: slaDueAt,
         },
         { transaction }
       );
 
-      // 3) registra no histórico
+      // 4) registra no histórico
       await devAgile.KanbanStatusHistory.create(
         {
           id: uuid.v4(),
           card_id: card.id,
           status_card_id: statusObj.id,
           previous_status_card_id: null,
-          changed_by: null, // nenhum atendente ainda
-          usuario_id, // quem abriu o chamado
-          empresa_id: empresa_id,
+          changed_by: null,
+          usuario_id,
+          empresa_id,
           setor_id,
           action_type: "create_card",
         },
         { transaction }
       );
 
-      // 4) cria a sessão
+      // 5) cria a sessão
       const sessao = await devAgile.KanbanSessoes.create(
         {
           id: uuid.v4(),
@@ -112,7 +123,7 @@ class KanbanCards_Services {
         { transaction }
       );
 
-      // 5) cria a mensagem inicial do cliente
+      // 6) cria a mensagem inicial do cliente
       const message = await devAgile.KanbanSessoesMessages.create(
         {
           id: uuid.v4(),
@@ -139,7 +150,6 @@ class KanbanCards_Services {
       };
     } catch (error) {
       console.log(error);
-
       await transaction.rollback();
       return {
         error: true,

@@ -15,7 +15,7 @@ router.get("/api/kanban/motivos", (req, res) =>
   kanbanMotivosController.pegaTodosMotivos_Controller(req, res)
 );
 router.get("/api/kanban/motivos/setor/:id", (req, res) =>
-  kanbanMotivosController.pegaMotivoPorID_setor_controller(req, res)
+  kanbanMotivosController.pegaMotivoPorID_setor_Controller(req, res)
 );
 
 // Rota para buscar um motivo pelo ID
