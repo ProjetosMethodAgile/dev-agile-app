@@ -80,6 +80,7 @@ async consultaTodosAtendente_Controller(req, res) {
     }
     return res.status(200).json({ message: result.message });
   }
+
   async ativaAtendente_controller(req, res) {
     const { id } = req.params;
     const result = await this.kanbanAtendenteService.ativaAtendente_Services(
@@ -97,22 +98,75 @@ async consultaTodosAtendente_Controller(req, res) {
     });
     return res.status(200).json({ message: result.message });
   }
-  async desativaSetorAtendente_controller(req, res) {
-    const { id } = req.params;
-    const result = await this.kanbanAtendenteService.desativaAtendenteSetores_Services(
-      id
-    );
+async desativaSetorAtendente_controller(req, res) {
+    try {
+      const { atendente_id, setor_id, } = req.params;
 
-  
-    
-    if (result.error) {
-      return res.status(404).json({ error: true, message: result.message });
+console.log(atendente_id);
+
+      const result = await this.kanbanAtendenteService.desativaAtendenteSetores_Services(
+        atendente_id,
+        setor_id
+      );
+
+      if (result.error) {
+        // 400 pois provavelmente foi um request inválido (vínculo não existe etc.)
+        return res.status(400).json({ error: true, message: result.message });
+      }
+
+      // notifica via websocket que o vínculo foi atualizado
+      ws.broadcast({
+        type: "atendenteSetorAtualizado",
+        payload: {
+          atendente_id,
+          setor_id,
+          status: false,
+        },
+        message: result.message,
+      });
+
+      return res.status(200).json({ message: result.message });
+    } catch (err) {
+      console.error("Erro no controller desativaSetorAtendente:", err);
+      return res
+        .status(500)
+        .json({ error: true, message: "Erro interno no servidor." });
     }
-    ws.broadcast({
-      type: `atendenteUpdated-${ result.message}`,
-      message: "Ativou o atendente",
-    });
-    return res.status(200).json({ message: result.message });
+  }
+async ativaSetorAtendente_controller(req, res) {
+    try {
+      const { atendente_id, setor_id, } = req.params;
+
+console.log(atendente_id);
+
+      const result = await this.kanbanAtendenteService.ativaAtendenteSetores_Services(
+        atendente_id,
+        setor_id
+      );
+
+      if (result.error) {
+        // 400 pois provavelmente foi um request inválido (vínculo não existe etc.)
+        return res.status(400).json({ error: true, message: result.message });
+      }
+
+      // notifica via websocket que o vínculo foi atualizado
+      ws.broadcast({
+        type: "atendenteSetorAtualizado",
+        payload: {
+          atendente_id,
+          setor_id,
+          status: false,
+        },
+        message: result.message,
+      });
+
+      return res.status(200).json({ message: result.message });
+    } catch (err) {
+      console.error("Erro no controller ativaSetorAtendente:", err);
+      return res
+        .status(500)
+        .json({ error: true, message: "Erro interno no servidor." });
+    }
   }
 
   

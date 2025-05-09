@@ -54,7 +54,10 @@ router.put("/api/helpdesk/atendentes/ativo/:id", checkTokenLogin, (req, res) =>
   kanbanAtendenteController.ativaAtendente_controller(req, res)
 );
 //desativa unico setor
-router.put("/api/helpdesk/atendentes/setor/ativo/:id", checkTokenLogin, (req, res) =>
+router.put("/api/helpdesk/atendentes/setor/ativa/:atendente_id/setor/:setor_id/", checkTokenLogin, (req, res) =>
+  kanbanAtendenteController.ativaSetorAtendente_controller(req, res)
+);
+router.put("/api/helpdesk/atendentes/setor/desativa/:atendente_id/setor/:setor_id/", checkTokenLogin, (req, res) =>
   kanbanAtendenteController.desativaSetorAtendente_controller(req, res)
 );
 
