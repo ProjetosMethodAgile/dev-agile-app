@@ -27,4 +27,12 @@ route.get("/api/dashboard/movements", checkTokenLogin, (req, res) =>
   dashboard_controller.getMovements_Controller(req, res)
 );
 
+// chamados criados em um dia (query: ?date=YYYY-MM-DD)
+route.get("/api/dashboard/created", checkTokenLogin, (req, res) =>
+  dashboard_controller.getCreatedByDate_Controller(req, res)
+);
+
+route.get("/api/dashboard/calendar", checkTokenLogin, (req, res) =>
+  dashboard_controller.getCalendar_Controller(req, res)
+);
 module.exports = route;

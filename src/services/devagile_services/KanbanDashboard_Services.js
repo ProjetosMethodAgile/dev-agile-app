@@ -233,7 +233,7 @@ class KanbanDashboard_Services {
     dateFrom = null,
     dateTo = null
   ) {
-    // filtro de setores
+    // 1) filtrar setores permitidos para o atendente
     const attendant = await devAgile.KanbanAtendenteHelpDesk.findOne({
       where: { usuario_id: userId, empresa_id: companyId },
       include: [
@@ -245,7 +245,7 @@ class KanbanDashboard_Services {
       ? overrideSetores.filter((id) => allowed.includes(id))
       : allowed;
 
-    // a) resolução ao longo do tempo
+    // 2) resolução média ao longo do tempo
     const resolution = await devAgile.KanbanStatusHistory.findAll({
       where: { empresa_id: companyId },
       include: [
@@ -279,11 +279,10 @@ class KanbanDashboard_Services {
               EPOCH FROM (
                 "created_at" - (
                   SELECT h2."created_at"
-                    FROM kanban_status_histories h2
-                   WHERE h2."card_id" = "KanbanStatusHistory"."card_id"
-                     AND h2."action_type" = 'create_card'
-                   ORDER BY h2."created_at"
-                   LIMIT 1
+                  FROM kanban_status_histories h2
+                  WHERE h2."card_id" = "KanbanStatusHistory"."card_id"
+                    AND h2."action_type" = 'create_card'
+                  ORDER BY h2."created_at" LIMIT 1
                 )
               )
             ) / 60
@@ -297,9 +296,20 @@ class KanbanDashboard_Services {
       raw: true,
     });
 
-    // b) volume por atendente
+    // 3) volume por atendente (só count de status_change para 'Encerrado')
+    // buscar dinamicamente o ID do status "Encerrado"
+    const encerradoStatus = await devAgile.KanbanStatusCard.findOne({
+      where: { nome: "Encerrado" },
+      attributes: ["id"],
+    });
+    const encerradoStatusId = encerradoStatus?.id;
+
     const volume = await devAgile.KanbanStatusHistory.findAll({
-      where: { empresa_id: companyId },
+      where: {
+        empresa_id: companyId,
+        status_card_id: encerradoStatusId, // só encerramentos
+        action_type: "status_change", // só mudanças de status
+      },
       include: [
         {
           model: devAgile.KanbanCards,
@@ -320,29 +330,44 @@ class KanbanDashboard_Services {
             },
           ],
         },
+        {
+          model: devAgile.KanbanAtendenteHelpDesk,
+          as: "atendente",
+          attributes: [],
+          include: [
+            {
+              model: devAgile.Usuario,
+              as: "UsuarioAtendente",
+              attributes: ["id", "nome"],
+            },
+          ],
+        },
       ],
       attributes: [
-        [col("changed_by"), "name"],
+        [col("atendente.UsuarioAtendente.nome"), "name"],
         [fn("COUNT", "*"), "value"],
       ],
-      group: ["name"],
+      group: [
+        "atendente->UsuarioAtendente.id",
+        "atendente->UsuarioAtendente.nome",
+      ],
+      order: [["value", "DESC"]],
       raw: true,
     });
 
-    // c) distribuição de status (último por card)
+    // 4) distribuição de status
     const lastStatuses = await sequelizeDevAgileCli.query(
       `
-      SELECT DISTINCT ON (h.card_id)
-        h.card_id,
-        h.status_card_id
-      FROM kanban_status_histories h
-      JOIN kanban_cards c ON c.id = h.card_id
-      WHERE h.empresa_id = :companyId
-        AND h.setor_id IN (:setorIds)
-        AND (:dateFrom::timestamp IS NULL OR c."createdAt" >= :dateFrom::timestamp)
-        AND (:dateTo  ::timestamp IS NULL OR c."createdAt" <= :dateTo  ::timestamp)
-      ORDER BY h.card_id, h.created_at DESC
-      `,
+    SELECT DISTINCT ON (h.card_id)
+      h.card_id, h.status_card_id
+    FROM kanban_status_histories h
+    JOIN kanban_cards c ON c.id = h.card_id
+    WHERE h.empresa_id = :companyId
+      AND h.setor_id IN (:setorIds)
+      AND (:dateFrom::timestamp IS NULL OR c."createdAt" >= :dateFrom::timestamp)
+      AND (:dateTo  ::timestamp IS NULL OR c."createdAt" <= :dateTo::timestamp)
+    ORDER BY h.card_id, h.created_at DESC
+    `,
       {
         replacements: { companyId, setorIds, dateFrom, dateTo },
         type: QueryTypes.SELECT,
@@ -360,7 +385,7 @@ class KanbanDashboard_Services {
       value: counts[s.id] || 0,
     }));
 
-    // d) heatmap
+    // 5) heatmap
     const calendar = await devAgile.KanbanStatusHistory.findAll({
       where: { empresa_id: companyId },
       include: [
@@ -393,6 +418,7 @@ class KanbanDashboard_Services {
       raw: true,
     });
 
+    // 6) retorno final
     return {
       resolutionOverTime: resolution.map((r) => ({
         name: r.name,
@@ -413,37 +439,87 @@ class KanbanDashboard_Services {
   // --------------------------------------------------
   // 3) Últimas 5 movimentações
   // --------------------------------------------------
+  // src/services/devagile_services/KanbanDashboard_Services.js
+
+  /**
+   * Retorna lista paginada de movimentações, com total e possibilidade de buscar por título.
+   * @param {string} companyId
+   * @param {string} userId
+   * @param {string[]} overrideSetores
+   * @param {string|null} dateFrom  // 'YYYY-MM-DD'
+   * @param {string|null} dateTo    // 'YYYY-MM-DD'
+   * @param {{ page: number, pageSize: number, search: string }} opts
+   */
   async getMovements_Services(
     companyId,
     userId,
     overrideSetores = [],
     dateFrom = null,
-    dateTo = null
+    dateTo = null,
+    { page = 1, pageSize = 5, search = "" } = {}
   ) {
+    // 1) Descobrir quais setores o atendente pode ver
     const attendant = await devAgile.KanbanAtendenteHelpDesk.findOne({
       where: { usuario_id: userId, empresa_id: companyId },
       include: [
         { model: devAgile.KanbanSetores, as: "Setores", attributes: ["id"] },
       ],
     });
-    const allowed = attendant?.Setores.map((s) => s.id) || [];
+    const allowed = (attendant?.Setores || []).map((s) => s.id);
     const setorIds = overrideSetores.length
       ? overrideSetores.filter((id) => allowed.includes(id))
       : allowed;
 
+    // 2) Construir filtro de data sobre history.created_at
+    const historyWhere = { empresa_id: companyId };
+    if (dateFrom) {
+      historyWhere.created_at = {
+        ...(historyWhere.created_at || {}),
+        [Op.gte]: new Date(dateFrom),
+      };
+    }
+    if (dateTo) {
+      const dt = new Date(dateTo);
+      dt.setHours(23, 59, 59, 999);
+      historyWhere.created_at = {
+        ...(historyWhere.created_at || {}),
+        [Op.lte]: dt,
+      };
+    }
+
+    // 3) Filtro de busca no título do card
+    const titleWhere = search
+      ? { titulo_chamado: { [Op.iLike]: `%${search}%` } }
+      : {};
+
+    // 4) Conta total de registros (para páginação)
+    const total = await devAgile.KanbanStatusHistory.count({
+      where: historyWhere,
+      include: [
+        {
+          model: devAgile.KanbanCards,
+          as: "card",
+          where: titleWhere,
+          include: [
+            {
+              model: devAgile.KanbanComlumns,
+              as: "ColumnsCard",
+              where: { setor_id: { [Op.in]: setorIds } },
+            },
+          ],
+        },
+      ],
+    });
+
+    // 5) Busca efetiva com offset/limit
     const recent = await devAgile.KanbanStatusHistory.findAll({
-      where: { empresa_id: companyId },
+      where: historyWhere,
       include: [
         {
           model: devAgile.KanbanCards,
           as: "card",
           attributes: ["titulo_chamado"],
-          where: {
-            [Op.and]: [
-              { createdAt: { [Op.gte]: dateFrom || new Date(0) } },
-              { createdAt: { [Op.lte]: dateTo || new Date() } },
-            ],
-          },
+          where: titleWhere,
           include: [
             {
               model: devAgile.KanbanComlumns,
@@ -467,20 +543,140 @@ class KanbanDashboard_Services {
           model: devAgile.KanbanAtendenteHelpDesk,
           as: "atendente",
           attributes: ["id"],
+          include: [
+            {
+              model: devAgile.Usuario,
+              as: "UsuarioAtendente",
+              attributes: ["nome"],
+            },
+          ],
         },
       ],
       order: [["created_at", "DESC"]],
-      limit: 5,
+      offset: (page - 1) * pageSize,
+      limit: pageSize,
     });
 
-    return recent.map((r) => ({
+    // 6) Monta o objeto de resposta
+    const movements = recent.map((r) => ({
       id: r.id,
       card_id: r.card_id,
+      title: r.card?.titulo_chamado || null,
       action: r.action_type,
-      from: r.previous_column,
-      to: r.column_atual,
+      previous_column: r.previousStatus?.nome || null,
+      column_atual: r.status?.nome || null,
       who: r.atendente?.UsuarioAtendente?.nome || "Sistema",
       created_at: r.created_at,
+    }));
+
+    return { total, page, pageSize, movements };
+  }
+
+  /**
+   * Retorna todos os cards criados (action_type = 'create_card') em uma data específica
+   */
+  // retorna chamados criados por data
+  async getCreatedByDate_Services(
+    companyId,
+    userId,
+    overrideSetores = [],
+    dateFrom = null,
+    dateTo = null
+  ) {
+    // setores permitidos
+    const attendant = await devAgile.KanbanAtendenteHelpDesk.findOne({
+      where: { usuario_id: userId, empresa_id: companyId },
+      include: [
+        { model: devAgile.KanbanSetores, as: "Setores", attributes: ["id"] },
+      ],
+    });
+    const allowed = attendant?.Setores.map((s) => s.id) || [];
+    const setorIds = overrideSetores.length
+      ? overrideSetores.filter((id) => allowed.includes(id))
+      : allowed;
+
+    // busca apenas action_type=create_card
+    const records = await devAgile.KanbanStatusHistory.findAll({
+      where: {
+        empresa_id: companyId,
+        action_type: "create_card",
+        setor_id: { [Op.in]: setorIds },
+        ...(dateFrom && { created_at: { [Op.gte]: dateFrom } }),
+        ...(dateTo && { created_at: { [Op.lte]: dateTo } }),
+      },
+      include: [
+        {
+          model: devAgile.KanbanCards,
+          as: "card",
+          attributes: ["id", "titulo_chamado"],
+          include: [
+            {
+              model: devAgile.KanbanComlumns,
+              as: "ColumnsCard",
+              attributes: ["nome"],
+            },
+            {
+              model: devAgile.KanbanMotivos,
+              as: "Motivo",
+              attributes: ["nome"],
+            },
+          ],
+        },
+        {
+          model: devAgile.Usuario,
+          as: "usuario",
+          attributes: ["nome"],
+        },
+        {
+          model: devAgile.KanbanSetores,
+          as: "setor",
+          attributes: ["nome"],
+        },
+      ],
+      order: [["created_at", "ASC"]],
+    });
+
+    // mapeia para CreatedCard[]
+    return records.map((r) => ({
+      id: r.id,
+      cardId: r.card.id,
+      title: r.card.titulo_chamado,
+      createdAt: r.created_at,
+      setor: r.setor?.nome || null,
+      cliente: r.usuario?.nome || null,
+      motivo: r.card.Motivo?.nome || null,
+    }));
+  }
+
+  // src/services/devagile_services/KanbanDashboard_Services.js
+
+  async getCalendar_Services(companyId, userId, monthFrom, monthTo) {
+    // transforma “2025-05” em “2025-05-01”
+    const fromDate = `${monthFrom}-01`;
+    // e o toDate será o primeiro dia do mês seguinte
+    const toDate = `${monthTo}-01`;
+
+    const rows = await sequelizeDevAgileCli.query(
+      `
+    SELECT
+      TO_CHAR(h.created_at, 'YYYY-MM-DD') AS date,
+      COUNT(*) FILTER (WHERE h.action_type = 'create_card') AS count
+    FROM kanban_status_histories h
+    WHERE h.empresa_id = :companyId
+      AND h.created_at >= :fromDate::date
+      AND h.created_at <  (:toDate::date + INTERVAL '1 month')
+    GROUP BY date
+    ORDER BY date
+  `,
+      {
+        replacements: { companyId, fromDate, toDate },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    return rows.map((r) => ({
+      date: r.date,
+      count: parseInt(r.count, 10),
     }));
   }
 }
