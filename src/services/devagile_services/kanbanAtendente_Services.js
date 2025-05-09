@@ -221,25 +221,68 @@ class KanbanAtendente_Services extends Services {
       return { error: true, message: "Erro ao Ativar o atendente" };
     }
   }
-  
-  async desativaAtendenteSetores_Services(id) {
+   async desativaAtendenteSetores_Services(atendente_id, setor_id) {
     try {
-      const AtendenteModel = devAgile.KanbanAtendenteSetores;
-  
-      const atendente = await AtendenteModel.findOne({ where: { id } });
-      if (!atendente) {
-        return { error: true, message: "Atendente não encontrado" };
+      // procura o vínculo exato
+      const record = await devAgile.KanbanAtendenteSetores.findOne({
+        where: {
+          atendente_id,
+          setor_id,
+        },
+      });
+      if (!record) {
+        return {
+          error: true,
+          message: "Vínculo atendente↔setor não encontrado.",
+        };
       }
-  
-      await atendente.update({ status: true });
-  
-      return { error: false, message: "Atendente Ativo com sucesso" };
+
+      // atualiza SOMENTE esse registro
+      await record.update({ status: false });
+
+      return {
+        error: false,
+        message: "Setor desativado com sucesso.",
+      };
     } catch (err) {
-      console.error("Erro ao ativar o atendente:", err);
-      return { error: true, message: "Erro ao Ativar o atendente" };
+      console.error("Erro ao desativar setor do atendente:", err);
+      return {
+        error: true,
+        message: "Erro ao desativar setor.",
+      };
     }
   }
-  
+   async ativaAtendenteSetores_Services(atendente_id, setor_id) {
+    try {
+      // procura o vínculo exato
+      const record = await devAgile.KanbanAtendenteSetores.findOne({
+        where: {
+          atendente_id,
+          setor_id,
+        },
+      });
+      if (!record) {
+        return {
+          error: true,
+          message: "Vínculo atendente↔setor não encontrado.",
+        };
+      }
+
+      // atualiza SOMENTE esse registro
+      await record.update({ status: true });
+
+      return {
+        error: false,
+        message: "Setor ativado com sucesso.",
+      };
+    } catch (err) {
+      console.error("Erro ao desativar setor do atendente:", err);
+      return {
+        error: true,
+        message: "Erro ao desativar setor.",
+      };
+    }
+  }
 
   async consultaUsuariosNaoAtendentesByEmpresaID_Services(id) {
     try {
