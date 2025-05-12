@@ -31,7 +31,10 @@ module.exports = (sequelize, DataTypes) => {
       sessao_id: DataTypes.UUID,
       atendente_id: DataTypes.UUID,
       cliente_id: DataTypes.UUID,
-      content_msg: DataTypes.STRING,
+      content_msg: DataTypes.TEXT,
+      htmlBody: {
+        type: DataTypes.TEXT,
+      },
       message_id: DataTypes.STRING,
       in_reply_to: DataTypes.STRING,
       references_email: DataTypes.TEXT,
