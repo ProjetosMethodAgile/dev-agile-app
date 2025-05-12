@@ -34,6 +34,7 @@ class KanbanCards_Services {
           atendente_id: null,
           cliente_id: null,
           message_id: null,
+          htmlBody: null,
         },
         { transaction }
       );
@@ -217,6 +218,7 @@ class KanbanCards_Services {
           in_reply_to: inReplyTo,
           message_id: message_id || null,
           from_email: from_email || null,
+          htmlBody: htmlBody || null,
           to_email,
           cc_email,
           bcc_email,
@@ -500,7 +502,6 @@ class KanbanCards_Services {
       const card = await devAgile.KanbanCards.findOne({
         where: { id: card_id },
 
-        // *** Aqui usamos createdAt/updatedAt (camelCase) ***
         attributes: [
           "id",
           "column_id",
@@ -555,6 +556,7 @@ class KanbanCards_Services {
                   "system_msg",
                   "cliente_id",
                   "content_msg",
+                  "htmlBody",
                   "createdAt",
                   "updatedAt",
                 ],
