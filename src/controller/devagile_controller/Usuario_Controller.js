@@ -229,7 +229,8 @@ class Usuario_Controller extends Controller {
       const htmlContent = htmlTemplate
         .replace("{{NOME_USUARIO}}", userExist.retorno.nome)
         .replace("{{SENHA_TEMPORARIA}}", senhaGerada)
-        .replace("{{TAG_EMPRESA}}", tag);
+        .replace("{{TAG_EMPRESA}}", tag)
+        .replace("{{EMPRESA_URL}}", process.env.EMPRESA_URL);
 
       // envia o email com a senha criptografadas
       const mail = await sendEmailRaw({
