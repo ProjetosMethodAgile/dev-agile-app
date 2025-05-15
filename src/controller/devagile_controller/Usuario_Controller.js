@@ -138,11 +138,12 @@ class Usuario_Controller extends Controller {
         .replace("{{TAG_EMPRESA}}", tag);
 
       // envia o email com a senha criptografadas
-      sendEmailRaw({
+      const mail = await sendEmailRaw({
         to: email,
         subject: "Cadastro de Usuário",
         html: htmlContent,
       });
+      console.log(mail);
 
       // Gera a senha criptografada
       const salt = await bcrypt.genSalt(12);
@@ -231,11 +232,12 @@ class Usuario_Controller extends Controller {
         .replace("{{TAG_EMPRESA}}", tag);
 
       // envia o email com a senha criptografadas
-      sendEmailRaw({
+      const mail = await sendEmailRaw({
         to: email,
         subject: "Redefinição de senha DevAgile",
         html: htmlContent,
       });
+      console.log(mail);
 
       // Gera a senha criptografada
       const salt = await bcrypt.genSalt(12);
