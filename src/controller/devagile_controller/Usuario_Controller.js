@@ -139,6 +139,7 @@ class Usuario_Controller extends Controller {
 
       // envia o email com a senha criptografadas
       const mail = await sendEmailRaw({
+        from: [process.env.EMAIL_PRINCIPAL],
         to: email,
         subject: "Cadastro de Usuário",
         html: htmlContent,
@@ -234,6 +235,7 @@ class Usuario_Controller extends Controller {
 
       // envia o email com a senha criptografadas
       const mail = await sendEmailRaw({
+        from: [process.env.EMAIL_PRINCIPAL],
         to: email,
         subject: "Redefinição de senha DevAgile",
         html: htmlContent,
