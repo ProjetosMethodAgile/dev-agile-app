@@ -168,7 +168,13 @@ class KanbanDashboard_Services {
         ],
         raw: true,
       });
-      avgResolutionTime = avgMin ? parseFloat(avgMin.toFixed(2)) : 0;
+      // garanta que avgMin seja um number (ou string numérico)
+      if (avgMin != null) {
+        // primeiro parseFloat para garantir number, depois toFixed e novo parseFloat
+        avgResolutionTime = parseFloat(parseFloat(avgMin).toFixed(2));
+      } else {
+        avgResolutionTime = 0;
+      }
     }
 
     // 6) média de interações por ticket
